@@ -6,11 +6,11 @@ module hartree_fock
   implicit none
 
   private
-  public hf_procedure, hf_write_results
+  public hf_procedure
 
 contains
 
-  subroutine hf_procedure (bst, nd, no, m, parity, H, C, w, hf_energy)
+  subroutine hf_procedure (bst, nd, no, m, parity, H, C, w, filepath)
     type(basis_sturmian_nr) , intent(in)    :: bst
     integer                 , intent(in)    :: nd
     integer                 , intent(in)    :: no(:)
@@ -19,11 +19,12 @@ contains
     real*8                  , intent(in)    :: H(:, :)
     real*8                  , intent(inout) :: C(:, :)
     real*8                  , intent(inout) :: w(:)
-    real*8                  , intent(inout) :: hf_energy
+    character(len = *)      , intent(in)    :: filepath
     real*8                  , allocatable   :: integrals(:, :, :, :)
     real*8                  , allocatable   :: P(:, :)
     real*8                  , allocatable   :: G(:, :)
     real*8                  , allocatable   :: F(:, :)
+    real*8                                  :: hf_energy
     logical                                 :: converged
     integer                                 :: ii
 
@@ -58,6 +59,8 @@ contains
 
     hf_energy = (data_in%Z1 * data_in%Z2 / data_in%Rd) + &
         calc_electronic_energy (data_in%n_e, C, P, H, F)
+
+    call hf_write_results(bst, nd, no, m, parity, C, hf_energy, filepath)
 
   end subroutine hf_procedure
 
@@ -615,12 +618,11 @@ contains
     open (unitno, file = filepath)
 
     write(unitno, *) data_in%target
-    write(unitno, *) hf_energy
     write(unitno, *) m
     write(unitno, *) parity
     write(unitno, *) dble(0.5)
     write(unitno, *) data_in%labot, data_in%latop
-
+    write(unitno, *) hf_energy
 
     write(unitno, *) grid%nr
     write(unitno, *) grid%gridr(:)

@@ -281,12 +281,11 @@ contains
 
     !< read state information
     read(unitno, *) core%target
-    read(unitno, *) core%energy
     read(unitno, *) core%m
     read(unitno, *) core%parity
     read(unitno, *) core%spin
     read(unitno, *) core%labot, core%latop
-
+    read(unitno, *) core%energy
 
     !< read original grid
     read(unitno, *) temp_nr

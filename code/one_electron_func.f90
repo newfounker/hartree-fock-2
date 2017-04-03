@@ -1,4 +1,4 @@
-subroutine construct_1el_basis_nr(Number_one_electron_func)
+subroutine construct_1el_basis_nr(Number_one_electron_func, output_dir)
     use input_data
     use sturmian_class
     use vnc_module
@@ -25,11 +25,12 @@ subroutine construct_1el_basis_nr(Number_one_electron_func)
     type(sturmian_nr), pointer:: pi, pj
     real*8::  VLambdaR_ME
 
+    !< added by tom ross
+    character(len = *) , intent(in) :: output_dir
     logical :: prediag
     real*8 :: hf_energy
-
-    !< hartree fock core
     type(core_state) :: core
+
     !
     !
     hlike = .true.
@@ -187,14 +188,13 @@ subroutine construct_1el_basis_nr(Number_one_electron_func)
 
         call rsg(nd, nd, H, b, w, 2, CI, ierr)
 
-        call hf_procedure(bst, nd, no, ma, ipar, H, CI, w, hf_energy)
-        call hf_write_results(bst, nd, no, ma, ipar, CI, hf_energy, "../output/hf_results.dat")
+        call hf_procedure(bst, nd, no, ma, ipar, H, CI, w, output_dir//"/hf_results.dat")
 
-        call core%read_from("../output/hf_results.dat")
-        call core%write_pw_to("../output/core_plots.dat")
-        call core%write_coulomb_pw_to("../output/core_coulomb.dat")
-        call core%write_potential_pw_to("../output/core_potential.dat")
-        call core_spectrum(core, bst, nd, no, H, b)
+        ! call core%read_from(output_dir//"/hf_results.dat")
+        ! call core%write_pw_to(output_dir//"/core_plots.dat")
+        ! call core%write_coulomb_pw_to(output_dir//"/core_coulomb.dat")
+        ! call core%write_potential_pw_to(output_dir//"/core_potential.dat")
+        ! call core_spectrum(core, bst, nd, no, H, b)
 
 !!$ Create basis of 1-electron pseudostates from Laguere basis and CI coef.
 

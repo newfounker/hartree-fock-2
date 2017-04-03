@@ -1,0 +1,40 @@
+;; RefTeX parse info file
+;; File: /home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex
+;; User: tom (Tom Ross)
+
+(set reftex-docstruct-symbol '(
+
+
+(xr nil "\\\\\\\\\\\\")
+
+(index-tags)
+
+(is-multi nil)
+
+(bibview-cache)
+
+(master-dir . "/home/tom/Dropbox/university/physics_project/notes/")
+
+(label-numbers)
+
+(bof "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex")
+
+(toc "toc" "    1 Frozen-Core Hartree-Fock Potential" "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil 2 "1" "\\section{Frozen-Core Hartree-Fock Potential}" 788)
+
+("sec:frozen-core-hartree" "s" nil "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil "")
+
+(toc "toc" "      1.1 Local Coulomb Potential" "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil 3 "1.1" "\\subsection{Local Coulomb Potential}" 2162)
+
+(toc "toc" "      1.2 Non-Local Exchange Potential" "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil 3 "1.2" "\\subsection{Non-Local Exchange Potential}" 4729)
+
+("sec:non-local-exchange" "s" nil "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil "")
+
+("sec:local-coul-potent" "s" nil "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil "")
+
+(toc "toc" "      1.1 Coulomb" "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil 3 "1.1" "\\subsection{Coulomb}" 2162)
+
+(toc "toc" "    1 Frozen-Core Hartree-Fock Potential" "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex" nil 2 "1" "\\section{Frozen-Core Hartree-Fock Potential}" 788)
+
+(eof "/home/tom/Dropbox/university/physics_project/notes/hartree_fock_notes.tex")
+))
+

@@ -1,0 +1,275 @@
+\documentclass[draft]{article}
+
+% - Style
+\usepackage{base}
+
+% - Title
+\title{Hartree Fock Notes}
+\author{Tom Ross}
+\date{Date}
+
+% - Headers
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\theauthor}
+\chead{}
+\lhead{\thetitle}
+\rfoot{\thepage}
+\cfoot{}
+\lfoot{}
+
+\begin{document}
+
+\newcommand{\molecule}[1][]{\Psi\indices{#1}}
+\newcommand{\orbitalspin}[1][]{\chi\indices{#1}}
+
+\newcommand{\orbital}[1][]{\Omega\indices{#1}}
+\newcommand{\orbitalpw}[1][]{\omega\indices{#1}}
+
+\newcommand{\electron}[1][]{\Phi\indices{#1}}
+\newcommand{\sturmian}[1][]{\phi\indices{#1}}
+\newcommand{\laguerre}[1][]{\xi\indices{#1}}
+
+\newcommand{\harmonic}[1][]{Y\indices{#1}}
+\newcommand{\irrep}[1][]{C\indices{#1}}
+
+\newcommand{\spin}{\sigma}
+\newcommand{\parity}{\pi}
+\newcommand{\proj}{m}
+\renewcommand{\ang}{\ell}
+
+\section{Frozen-Core Hartree-Fock Potential}
+\label{sec:frozen-core-hartree}
+
+We consider a molecule $\molecule[^{\lr{\spin \pi \proj}}]$ which has spin
+$\spin$, parity $\pi$, projection $\proj$ and is composed of $N$ occupied
+spin orbitals $\lrset{\orbitalspin[^{\lr{\proj}}_n]}_{n = 1}^{N}$.  To ensure
+the total spin of the molecule is a conserved quantity, we assume that the spin
+orbitals are formed from a set of doubly-occupied spatial orbitals,
+$\lrset{\orbital[^{\lr{\proj}}_n]}_{n = 1}^{N/2}$.  Furthermore, we suppose that
+each of these spatial orbitals can be expanded in partial waves
+\begin{equation*}
+  \orbital[^{\lr{\proj}}_n]\lr{r, \theta, \phi}
+  =
+  \sum_{\ang = 0}^{\infty}
+  \orbitalpw[_{n \ang}]\lr{r}
+  \harmonic[_{\ang \proj}]\lr{\theta, \phi}
+\end{equation*}
+where $\orbitalpw[_{n \ang}]$ are referred to as the partial waves, and
+$\harmonic[_{\ang \proj}]$ are the spherical harmonics.
+
+~
+
+We consider the case where an electron $\electron[^{\lr{\spin'}}]$, with spin
+$\spin'$, interacts with this molecule.
+To do so, we suppose that the electron can be expanded in terms of a basis
+the electronic state can be expanded in terms of a basis
+$\lrset{\sturmian[_{\alpha}] =
+  \laguerre[_{k_{\alpha} \ang_{\alpha}}]\lr{r}
+  \harmonic[_{\ang_{\alpha} \proj_{\alpha}}]\lr{\theta, \phi}}$
+and consider how the basis elements interact with the molecule.
+
+\subsection{Local Coulomb Potential}
+\label{sec:coulomb}
+
+Coulombic interaction between basis elements and the electrons in the
+molecule give rise to matrix elements of the form
+\begin{equation*}
+  J_{\alpha \beta}
+  =
+  \mel*{
+    \sturmian[_{\alpha}]
+  }{
+    \hat{J}
+  }{
+    \sturmian[_{\beta}]
+  }
+  =
+  2
+  \sum_{n = 1}^{N/2}
+  \braket*{
+    \sturmian[_{\alpha}]
+    \orbital[^{\lr{\proj}}_n]
+  }{
+    \sturmian[_{\beta}]
+    \orbital[^{\lr{\proj}}_n]
+  }
+\end{equation*}
+where
+\begin{multline*}
+  \braket*{
+    \sturmian[_{\alpha}]
+    \orbital[^{\lr{\proj}}_n]
+  }{
+    \sturmian[_{\beta}]
+    \orbital[^{\lr{\proj}}_n]
+  }
+  =
+  \\
+  \sum_{l_{1} = 0}^{\infty}
+  \sum_{l_{2} = 0}^{\infty}
+  \sum_{\lambda = 0}^{\infty}
+  \sum_{\mu = -\lambda}^{\lambda}
+  \mel*{
+    \laguerre[_{k_{\alpha} \ang_{\alpha}}]
+    \orbitalpw[_{n \ang_{1}}]
+  }{
+    \tfrac
+    {
+      r_{<}^{\lambda}
+    }
+    {
+      r_{>}^{\lambda + 1}
+    }
+  }{
+    \laguerre[_{k_{\beta} \ang_{\beta}}]
+    \orbitalpw[_{n \ang_{2}}]
+  }
+  \mel*{
+    \harmonic[_{\ang_{\alpha} \rho_{\alpha}}]
+  }{
+    \irrep[_{\lambda \mu}]
+  }{
+    \harmonic[_{\ang_{\beta} \rho_{\beta}}]
+  }
+  \mel*{
+    \harmonic[_{\ang_{1} \proj}]
+  }{
+    {\irrep[_{\lambda \mu}]}^{\dagger}
+  }{
+    \harmonic[_{\ang_{2} \proj}]
+  }
+\end{multline*}
+and where $\irrep[_{\lambda \mu}]$ is the irreducible spherical harmonic.
+However, by introducing a potential expanded through partial waves in the
+following form
+\begin{equation*}
+  V\indices{_{\lambda \mu}}\lr{r}
+  =
+  2
+  \sum_{n = 1}^{N/2}
+  \sum_{l_{1} = 0}^{\infty}
+  \sum_{l_{2} = 0}^{\infty}
+  \mel*{
+    \harmonic[_{\ang_{1} \proj}]
+  }{
+    {\irrep[_{\lambda \mu}]}^{\dagger}
+  }{
+    \harmonic[_{\ang_{2} \proj}]
+  }
+  \lr[\Bigg]
+  {
+    \int\limits_{0}^{\infty}
+    \orbitalpw[_{n \ang_{1}}]\lr{r'}
+    \frac
+    {
+      \min\lr{r, r'}^{\lambda}
+    }
+    {
+      \max\lr{r, r'}^{\lambda + 1}
+    }
+    \orbitalpw[_{n \ang_{2}}]\lr{r'}
+    r'^{2}
+    \dd{r'}
+  }
+\end{equation*}
+we may write
+\begin{equation*}
+  J_{\alpha \beta}
+  =
+  \sum_{\lambda = 0}^{\infty}
+  \sum_{\mu = -\lambda}^{\lambda}
+  \mel*{
+    \laguerre[_{k_{\alpha} \ang_{\alpha}}]
+  }{
+    V\indices{_{\lambda \mu}}
+  }{
+    \laguerre[_{k_{\beta} \ang_{\beta}}]
+  }
+  \mel*{
+    \harmonic[_{\ang_{\alpha} \rho_{\alpha}}]
+  }{
+    \irrep[_{\lambda \mu}]
+  }{
+    \harmonic[_{\ang_{\beta} \rho_{\beta}}]
+  }.
+\end{equation*}
+Note that as a result of constraints on the Wigner 3-j symbol, the partial waves
+are non-vanishing only for $\mu = 0$, so only $V\indices{_{\lambda 0}}$ is of
+concern.
+
+\subsection{Non-Local Exchange Potential}
+\label{sec:exchange}
+
+Fermionic behaviour of electrons introduces a non-local coulombic interaction,
+known as the exchange potential.
+The matrix elements for this potential are given by
+\begin{equation*}
+  K_{\alpha \beta}
+  =
+  \mel*{
+    \sturmian[_{\alpha}]
+  }{
+    \hat{K}
+  }{
+    \sturmian[_{\beta}]
+  }
+  =
+  \sum_{n = 1}^{N/2}
+  \braket*{
+    \sturmian[_{\alpha}]
+    \orbital[^{\lr{\proj}}_n]
+  }{
+    \orbital[^{\lr{\proj}}_n]
+    \sturmian[_{\beta}]
+  }
+\end{equation*}
+where
+\begin{multline*}
+  \braket*{
+    \sturmian[_{\alpha}]
+    \orbital[^{\lr{\proj}}_n]
+  }{
+    \orbital[^{\lr{\proj}}_n]
+    \sturmian[_{\beta}]
+  }
+  =
+  \\
+  \sum_{l_{1} = 0}^{\infty}
+  \sum_{l_{2} = 0}^{\infty}
+  \sum_{\lambda = 0}^{\infty}
+  \sum_{\mu = -\lambda}^{\lambda}
+  \mel*{
+    \laguerre[_{k_{\alpha} \ang_{\alpha}}]
+    \orbitalpw[_{n \ang_{1}}]
+  }{
+    \tfrac
+    {
+      r_{<}^{\lambda}
+    }
+    {
+      r_{>}^{\lambda + 1}
+    }
+  }{
+    \orbitalpw[_{n \ang_{2}}]
+    \laguerre[_{k_{\beta} \ang_{\beta}}]
+  }
+  \mel*{
+    \harmonic[_{\ang_{\alpha} \rho_{\alpha}}]
+  }{
+    \irrep[_{\lambda \mu}]
+  }{
+    \harmonic[_{\ang_{2} \proj}]
+  }
+  \mel*{
+    \harmonic[_{\ang_{1} \proj}]
+  }{
+    {\irrep[_{\lambda \mu}]}^{\dagger}
+  }{
+    \harmonic[_{\ang_{\beta} \rho_{\beta}}]
+  }.
+\end{multline*}
+A radial potential cannot be introduced to simplify the calculation of these
+elements due to the non-locality of the interaction.
+
+\end{document}

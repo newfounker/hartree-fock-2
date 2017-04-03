@@ -11,10 +11,28 @@ program main
 !
   integer:: Number_one_electron_func, ipar
 
+  character(len = 200) :: input_dir, output_dir, arg
+  integer              :: ii
+
+  if (command_argument_count() < 2) then
+
+    write (*, '(a)') "missing (2) arguments: input directory and output directory"
+    write (*, '(a)') "assuming default values"
+    write (*, *)
+
+    input_dir = "../input"
+    output_dir = "../output"
+
+  else
+
+    call get_command_argument(1, input_dir)
+    call get_command_argument(2, output_dir)
+
+  end if
 
 !------------------------------------------------------------------------
 ! Input data: construct routine for input type.
-  call readin(data_in, "data.in", .true.)
+  call readin(data_in, trim(input_dir), .true.)
 !
 !-------------------------------------------------------------------------
 ! construct routine for radial grid
@@ -41,7 +59,7 @@ program main
   end do
 
 
-  call construct_1el_basis_nr(Number_one_electron_func)
+  call construct_1el_basis_nr(Number_one_electron_func, trim(output_dir))
 
 !------------------------------------------
 

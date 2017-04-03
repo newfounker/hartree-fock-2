@@ -42,16 +42,18 @@ module input_data
 
 contains
 
-  subroutine readin(self, filepath, lwrite)
+  subroutine readin(self, input_dir, lwrite)
     implicit none
     type(input)                     :: self
-    character(len = *) , intent(in) :: filepath
+    character(len = *) , intent(in) :: input_dir
     logical            , intent(in) :: lwrite      ! T: write to screen, F: dont
+    character(len = 1000)           :: filepath
     logical                         :: file_exists
     integer                         :: unitno
     integer                         :: io_stat
     integer                         :: l, m
 
+    filepath = input_dir//"/data.in"
 
     inquire(file = filepath, exist = file_exists)
 
