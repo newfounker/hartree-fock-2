@@ -1,0 +1,67 @@
+
+                 p1 => bstF5%b(nsp1)
+                 p2 => bstF5%b(nsp2)
+                 p1p => bstF5%b(nsp1p)
+                 p2p => bstF5%b(nsp2p)
+                 
+                 
+!!$   overlap and one-electron operator matrix              
+                 if(mnsp1 .eq. mnsp1p .and. mnsp2 .eq. mnsp2p) then
+                    b(nc,ncp) =  bstF5%ortint(nsp1,nsp1p) * bstF5%ortint(nsp2,nsp2p)
+                    
+                    call Hlagorb(bstF5,nsp1,nsp1p,mnsp1,result)
+                    oneelme =  result * bstF5%ortint(nsp2,nsp2p)
+                    call Hlagorb(bstF5,nsp2,nsp2p,mnsp2,result)
+                    oneelme =  oneelme + result * bstF5%ortint(nsp1,nsp1p)
+                    
+                 endif
+                 
+
+                 if((nsp1 .eq. nsp2 .and. mnsp1 .eq. mnsp2) .and. (nsp1p .ne. nsp2p .or. mnsp1p .ne. mnsp2p)) then
+                    ! <aa | ..| b1 b2>
+                    b(nc,ncp) = sqrt(2d0) * b(nc,ncp) 
+                    oneelme = sqrt(2d0) * oneelme
+                 elseif((nsp1 .ne. nsp2 .or. mnsp1 .ne. mnsp2) .and. (nsp1p .eq. nsp2p .and. mnsp1p .eq. mnsp2p)) then
+                    ! <a1a2 | ..| bb>
+                    b(nc,ncp) = sqrt(2d0) * b(nc,ncp) 
+                    oneelme = sqrt(2d0) * oneelme
+                 elseif((nsp1 .eq. nsp2 .and. mnsp1 .eq. mnsp2) .and. (nsp1p .eq. nsp2p .and. mnsp1p .eq. mnsp2p)) then
+                    ! orbitals are the same  <aa|...|bb>
+                    ! all is already done...  
+                 else
+                    !<a1 a2 | ..| b1 b2>
+                    if(mnsp1 .eq. mnsp2p .and. mnsp2 .eq. mnsp1p) then
+                       b(nc,ncp) = b(nc,ncp) + (-1)**(is) * bstF5%ortint(nsp1,nsp2p) * bstF5%ortint(nsp2,nsp1p)
+                       
+                       call Hlagorb(bstF5,nsp1,nsp2p,mnsp1,result)
+                       oneelme =  oneelme + (-1)**(is) * result * bstF5%ortint(nsp2,nsp1p)
+                       
+                       call Hlagorb(bstF5,nsp2,nsp1p,mnsp2,result)
+                       oneelme =  oneelme + (-1)**(is) * result * bstF5%ortint(nsp1,nsp2p)                       
+                    endif
+                 endif
+
+                 
+!!$   two-electron operator  matrix
+                 call V12me(p1,p2,p1p,p2p,mnsp1,mnsp2,mnsp1p,mnsp2p,result)
+                 twoelme  = result
+!                 print*, 'result', result
+                 if((nsp1 .eq. nsp2 .and. mnsp1 .eq. mnsp2) .and. (nsp1p .ne. nsp2p .or. mnsp1p .ne. mnsp2p)) then
+                    ! <aa | ..| b1 b2>
+                    twoelme  =  sqrt(2d0) * twoelme 
+                 elseif((nsp1 .ne. nsp2 .or. mnsp1 .ne. mnsp2) .and. (nsp1p .eq. nsp2p .and. mnsp1p .eq. mnsp2p)) then
+                    ! <a1a2 | ..| bb>
+                    twoelme  =  sqrt(2d0) * twoelme 
+                 elseif((nsp1 .eq. nsp2 .and. mnsp1 .eq. mnsp2) .and. (nsp1p .eq. nsp2p .and. mnsp1p .eq. mnsp2p)) then
+                    ! orbitals are the same  <aa|...|bb>
+                    ! all is already done...  
+                 else
+                    !<a1 a2 | ..| b1 b2>
+                    call V12me(p1,p2,p2p,p1p,mnsp1,mnsp2,mnsp2p,mnsp1p,result)
+                    twoelme  = twoelme + (-1)**(is) * result
+                 endif
+                 
+
+!!$  accont for ZZ/R term
+                 tmp = data_in%Z*data_in%Z/data_in%Rd  * b(nc,ncp)
+                 H(nc,ncp) = oneelme + twoelme + tmp

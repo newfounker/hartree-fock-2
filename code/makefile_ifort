@@ -1,0 +1,90 @@
+e =  wigner.o rsg.o input_data.o gridr.o form.o  ovlpste1me_module.o sturmian.o  one_electron_func_module.o  target_data.o state_class.o vnc_module.o vnc.o    states_module.o  state_class.o  one_electron_func.o one_electron_func_spheroidal.o   osc.o osc12.o rearrange.o rearrange12.o H12.o main.o
+
+a = -C -g -fpp -openmp # Debuging and code develop
+#a = -O3 -fpp -openmp  # Optimizing after developed
+
+ifeq ($(HOST),vayu)
+	b = $(MKL)/lib/em64t/libmkl_scalapack_lp64.a $(MKL)/lib/em64t/libmkl_solver_lp64.a -Wl,--start-group $(MKL)/lib/em64t/libmkl_intel_lp64.a $(MKL)/lib/em64t/libmkl_intel_thread.a $(MKL)/lib/em64t/libmkl_core.a $(MKL)/lib/em64t/libmkl_blacs_openmpi_lp64.a -Wl,--end-group -openmp -reentrancy threaded
+else   # epic
+	b = $(MKLROOT)/lib/em64t/libmkl_scalapack_lp64.a $(MKLROOT)/lib/em64t/libmkl_solver_lp64.a -Wl,--start-group $(MKLROOT)/lib/em64t/libmkl_intel_lp64.a $(MKLROOT)/lib/em64t/libmkl_intel_thread.a $(MKLROOT)/lib/em64t/libmkl_core.a $(MKLROOT)/lib/em64t/libmkl_blacs_openmpi_lp64.a -Wl,--end-group -openmp -lpthread
+endif
+
+main: $e
+	ifort $a  $e  $b  -o main
+
+clean:
+	rm *.mod
+	rm *.o
+
+# -lmkl -lmkl_lapack
+
+wigner.o: wigner.f
+	ifort $a -c wigner.f
+
+rsg.o : rsg.f
+	ifort $a -c rsg.f
+
+input_data.o : input_data.f90
+	ifort $a -c input_data.f90
+
+gridr.o : gridr.f90 input_data.f90 input_data.f90
+	ifort $a -c gridr.f90
+
+
+sturmian.o :sturmian.f90  gridr.f90
+	ifort $a -c sturmian.f90
+
+vnc_module.o : vnc_module.f90 sturmian.f90
+	ifort $a -c vnc_module.f90
+
+vnc.o : vnc.f90 sturmian.f90 vnc_module.f90  input_data.f90
+	ifort $a -c vnc.f90
+
+
+main.o :  main.f90 gridr.f90 vnc.f90 sturmian.f90 one_electron_func_module.f90 input_data.f90 rearrange.f90
+	ifort $a -c main.f90
+
+state_class.o : state_class.f90 gridr.f90   sturmian.f90  one_electron_func_module.f90 one_electron_func_spheroidal.f90 target_data.f90
+	ifort $a -c state_class.f90
+
+states_module.o : states_module.f90 state_class.f90
+	ifort $a -c states_module.f90
+
+ ovlpste1me_module.o :  ovlpste1me_module.f90
+	ifort $a -c ovlpste1me_module.f90
+
+one_electron_func_spheroidal.o : one_electron_func_spheroidal.f90 one_electron_func_module.f90 sturmian.f90 vnc.f90 gridr.f90 input_data.f90 states_module.f90
+	ifort $a -c one_electron_func_spheroidal.f90
+
+one_electron_func.o : one_electron_func.f90 one_electron_func_module.f90 sturmian.f90 vnc.f90 gridr.f90 input_data.f90 states_module.f90 state_class.f90
+	ifort $a -c one_electron_func.f90
+
+
+one_electron_func_module.o : one_electron_func_module.f90 sturmian.f90
+	ifort $a -c one_electron_func_module.f90
+
+
+osc.o : osc.f90  state_class.f90 states_module.f90 sturmian.f90 gridr.f90 target_data.f90
+	ifort $a -c osc.f90
+
+osc12.o : osc12.f90  state_class.f90 states_module.f90 sturmian.f90 gridr.f90 target_data.f90
+	ifort $a -c osc12.f90
+
+
+rearrange.o :  gridr.f90 sturmian.f90 one_electron_func_module.f90 state_class.f90 rearrange.f90
+	ifort $a -c rearrange.f90
+
+
+target_data.o : target_data.f90  input_data.f90
+	ifort $a -c  target_data.f90
+
+form.o : form.f90  input_data.f90
+	ifort $a -c  form.f90
+
+
+H12.o : H12.f90  input_data.f90 states_module.f90 state_class.f90
+	ifort $a -c  H12.f90
+
+
+rearrange12.o :  gridr.f90 sturmian.f90 one_electron_func_module.f90 state_class.f90 rearrange12.f90
+	ifort $a -c rearrange12.f90
