@@ -1,18 +1,17 @@
 # -- compilation flags
 
-FC := gfortran
+FC = gfortran
 
-FFLAGS := \
-	# -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination \
-	-pedantic -Wfunction-elimination -Waliasing \
-	-Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
+FFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
 	-Wimplicit-procedure -Wimplicit-interface \
+	-fopenmp -openmp -O2 -ffast-math \
+	-fall-intrinsics -ffree-line-length-none
+	# -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination \
+	# -fmodule-private -fall-intrinsics -ffree-line-length-none
 	# -g -fcheck=all -fdump-tree-original \
-	-fmodule-private -fall-intrinsics -ffree-line-length-none -fno-align-commons \
-	-fopenmp -O2 -fast
 
 # -- object files
-OBJ := rsg.o \
+OBJ = rsg.o \
 		 input_data.o target_data.o \
 		 gridr.o sturmian.o \
 		 V12me.o \

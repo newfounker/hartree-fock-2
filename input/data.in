@@ -1,7 +1,7 @@
 He2                                                                            ! target
 2.0, 2.0, 0.0                                                                  ! Z1, Z2, Zasym,
 2.0, 0.5                                                                       ! Rd, origin
-0, 8                                                                           ! labot, latop
+0, 6                                                                           ! labot, latop
 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 ! nps(:), alpha(:)
 100.0, 20.0, 8, 32, 6, 20                                                      ! rmax, qmax, ndouble, npdbl, npwave, ltmax
 1.0e-20, 1.0e-20, 1.0e-20                                                      ! formcut, regcut, expcut

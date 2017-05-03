@@ -344,7 +344,7 @@ contains
     write (*, '(a, i6)') &
         "  for 1.0e-4 s/int: ", nint(1.0e-4 * (nd ** 4))
 
-    !$ start = omp_get_wtime()
+    !$start = omp_get_wtime()
 
     allocate(calculated(1:nd, 1:nd, 1:nd, 1:nd))
 
@@ -390,7 +390,7 @@ contains
     end do
     !$omp end parallel do
 
-    !$ finish = omp_get_wtime()
+    !$finish = omp_get_wtime()
 
     write (*, '(a, f10.3)') &
         " time taken:        ", finish - start
