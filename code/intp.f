@@ -42,11 +42,11 @@ C
       EQUIVALENCE (UK,DX),(IMN,X2,A1,M1),(IMX,X5,A5,M5),
      1         (J,SW,SA),(Y2,W2,W4,Q2),(Y5,W3,Q3)
 
-c     
+c
 c      IDERIV = 0
 c      INT = 0
 
-C      
+C
 C     PRELIMINARY PROCESSING
 C
       L0 = L
@@ -230,4 +230,3 @@ c      COMMON/DV/ IDERIV,DV(NR)
 c      COMMON/INTEG/ INT,FINT
 c      DATA IDERIV,INT/1,0/
 c      END
-

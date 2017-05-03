@@ -199,7 +199,8 @@ contains
           do ll = 1, K
 
             G(ii, jj) = G(ii, jj) + &
-                (P(ll, kk) * (integrals(ii, kk, jj, ll) - (0.5 * integrals(ii, kk, ll, jj))))
+                (P(ll, kk) * (integrals(ii, kk, jj, ll) - &
+                (0.5 * integrals(ii, kk, ll, jj))))
 
           end do
 
@@ -225,7 +226,8 @@ contains
             do ll = 1, K
 
               G(ii, jj) = G(ii, jj) + &
-                  (C(ll, s+1) * C(kk, s+1) * (integrals(ii, kk, jj, ll) - integrals(ii, kk, ll, jj)))
+                  (C(ll, s+1) * C(kk, s+1) * (integrals(ii, kk, jj, ll) - &
+                  integrals(ii, kk, ll, jj)))
 
             end do
 
@@ -334,6 +336,8 @@ contains
     write (*, '(a)') &
         " estimated time (s) "
     write (*, '(a, i6)') &
+        "  for 1.0e-7 s/int: ", nint(1.0e-7 * (nd ** 4))
+    write (*, '(a, i6)') &
         "  for 1.0e-6 s/int: ", nint(1.0e-6 * (nd ** 4))
     write (*, '(a, i6)') &
         "  for 1.0e-5 s/int: ", nint(1.0e-5 * (nd ** 4))
@@ -374,14 +378,6 @@ contains
               integrals(kk, jj, ii, ll) = integrals(ii, jj, kk, ll)
               integrals(ii, ll, kk, jj) = integrals(ii, jj, kk, ll)
               integrals(kk, ll, ii, jj) = integrals(ii, jj, kk, ll)
-
-              ! if (lwrite) then
-              !   write (*, '(a1, 2i4, a3, 2i4, a4)', advance = 'no') '<', ii, jj, ' | ', kk, ll, '> = '
-              !   write (*, '(a1, 2i4, a3, 2i4, a4)', advance = 'no') '<', kk, jj, ' | ', ii, ll, '> = '
-              !   write (*, '(a1, 2i4, a3, 2i4, a4)', advance = 'no') '<', kk, ll, ' | ', ii, jj, '> = '
-              !   write (*, '(a1, 2i4, a3, 2i4, a4)', advance = 'no') '<', ii, ll, ' | ', kk, jj, '> = '
-              !   write (*, '(f15.8)') integrals(ii, jj, kk, ll)
-              ! end if
 
             end if
 

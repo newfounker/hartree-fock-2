@@ -1,7 +1,10 @@
 module sturmian_class
 
-  public::  new_basis, copy_basis, init_function, copy, multiply_byscalar, construct, destruct, basis_size, get_k, get_ang_mom, get_ang_mom_proj, &
-      value, get_minf, get_maxf, fpointer, me_1el, ovlp3_nr, get_energy, print_energy, sort_by_energy, print_wf, ovlp, set_k, set_ang_mom_proj, get_alpha
+  public::  new_basis, copy_basis, init_function, copy, multiply_byscalar, &
+      construct, destruct, basis_size, get_k, get_ang_mom, get_ang_mom_proj, &
+      value, get_minf, get_maxf, fpointer, me_1el, ovlp3_nr, get_energy, &
+      print_energy, sort_by_energy, print_wf, ovlp, set_k, set_ang_mom_proj, &
+      get_alpha
 
   private:: construct_nr, destruct_nr, value_nr
 !

@@ -1,26 +1,18 @@
 # -- compilation flags
 
-FC = gfortran
+FC := gfortran
 
-FFLAGS = $(STANDARD) $(WARNINGS) $(DEBUG) $(OPTIMISE) $(LIBRARIES)
+FFLAGS := \
+	# -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination \
+	-pedantic -Wfunction-elimination -Waliasing \
+	-Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
+	-Wimplicit-procedure -Wimplicit-interface \
+	-g -fcheck=all -fdump-tree-original \
+	-fmodule-private -fall-intrinsics -ffree-line-length-none -fno-align-commons \
+	-fopenmp -O2
 
-STANDARD  = -std=f2003
-WARNINGS  = $(F1) $(F2) $(F3) $(F4)
-DEBUG     = $(F5)
-OPTIMISE  = $(F6)
-LIBRARIES = $(F7)
-LINKING	  =
-
-F1	= -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination
-F2	= -fmodule-private
-F3	= -Wimplicit-procedure -Wimplicit-interface
-F4	= -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check
-F5	= -g -fcheck=all -fdump-tree-original
-F6	= -O2
-F7	= -fall-intrinsics -ffree-line-length-none -fopenmp
-
-# -- source files
-object = rsg.o \
+# -- object files
+OBJ := rsg.o \
 		 input_data.o target_data.o \
 		 gridr.o sturmian.o \
 		 V12me.o \
@@ -31,21 +23,21 @@ object = rsg.o \
 		 ovlpste1me_module.o one_electron_func_module.o one_electron_func.o \
 		 main.o
 
-# -- commands
+# -- make commands
 make:
 	make main
 
-main: $(object)
+main: $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $^
 
-all: $(object)
+all: $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $^
 
 %.o: %.f90
-	$(FC) $(F4) $(F5) $(F6) $(F7) -c -o $@ $<
+	$(FC) $(FFLAGS) -c -o $@ $<
 
 %.o: %.f
-	$(FC) $(F4) $(F5) $(F7) -c -o $@ $<
+	$(FC) $(FFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.mod *.d *.original

@@ -34,8 +34,11 @@ module state_class
   end type basis_state
 
 
-  public::  new_basis_st, destruct_basis_st, sort_by_energy_basis_st, basis_size_st, print_energy_basis_st, calc_spectro_factors
-  public:: setupCI, construct_st, destruct_st, copy_st, get_angmom_proj, get_par_st, get_energy_st, get_inum_st, get_nam, get_na, get_ma, get_CI, ovlp_st, H1el_st,  osc_st, modify_CI_state, get_l_majconf, set_l_majconf
+  public::  new_basis_st, destruct_basis_st, sort_by_energy_basis_st, &
+      basis_size_st, print_energy_basis_st, calc_spectro_factors
+  public:: setupCI, construct_st, destruct_st, copy_st, get_angmom_proj, &
+      get_par_st, get_energy_st, get_inum_st, get_nam, get_na, get_ma, get_CI, &
+      ovlp_st, H1el_st,  osc_st, modify_CI_state, get_l_majconf, set_l_majconf
 
 
   interface get_nam
