@@ -4,7 +4,7 @@ FC = gfortran
 
 FFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
 	-Wimplicit-procedure -Wimplicit-interface \
-	-fopenmp -openmp -O2 -ffast-math \
+	-fopenmp -O3 -ffast-math \
 	-fall-intrinsics -ffree-line-length-none
 	# -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination \
 	# -fmodule-private -fall-intrinsics -ffree-line-length-none
