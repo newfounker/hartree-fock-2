@@ -15,7 +15,8 @@ module core_wavefunctions
   implicit none
 
   !< core state
-  !<  pw(l) is the l-th partial wave (radial function) of the given state
+  !<  pw(l, s) is the l-th partial wave (radial function) of the s-th spatial
+  !<    orbital (there are (n_e + 1)/2 spatial orbitals.)
   !<  coulomb_pw(:, l) is the l-th partial wave of the e-e (electron-electron)
   !<    coulomb potential
   !<  potential_pw(:, l) is the l-th partial wave of the e-e and nuclear
@@ -30,7 +31,7 @@ module core_wavefunctions
     real*8                          :: spin
     real*8                          :: energy
     integer                         :: labot, latop
-    type(sturmian_nr) , allocatable :: pw(:)
+    type(sturmian_nr) , allocatable :: pw(:, :)
 
     real*8            , allocatable :: coulomb_pw(:, :)
     real*8            , allocatable :: potential_pw(:, :)
@@ -109,22 +110,26 @@ contains
 !> get_pw_functions
   subroutine get_pw_functions (core, pw)
     class(core_state) , intent(in)  :: core
-    real*8            , intent(out) :: pw(:, core%labot:)
+    real*8            , intent(out) :: pw(:, core%labot:, 1:)
     integer                         :: mini, maxi
     real*8            , allocatable :: temp(:)
-    integer                         :: l
+    integer                         :: s, l
 
     allocate(temp(1:grid%nr))
 
-    do l = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      mini = get_minf(core%pw(l))
-      maxi = get_maxf(core%pw(l))
+      do l = core%labot, core%latop
 
-      temp(:) = fpointer(core%pw(l))
+        mini = get_minf(core%pw(l, s))
+        maxi = get_maxf(core%pw(l, s))
 
-      pw(:, l) = 0d0
-      pw(mini:maxi, l) = temp(mini:maxi)
+        temp(:) = fpointer(core%pw(l, s))
+
+        pw(:, l, s) = 0d0
+        pw(mini:maxi, l, s) = temp(mini:maxi)
+
+      end do
 
     end do
 
@@ -201,7 +206,7 @@ contains
     real*8                                   :: K_ij
     type(sturmian_nr)                        :: pk, pl
     integer                                  :: mi, mj, mk, ml
-    integer                                  :: l_1, l_2
+    integer                                  :: s, l_1, l_2
     real*8                                   :: temp
 
     mi = get_ang_mom_proj(pi)
@@ -209,19 +214,23 @@ contains
 
     K_ij = 0d0
 
-    do l_1 = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      pk = core%pw(l_1)
-      mk = get_ang_mom_proj(pk)
+      do l_1 = core%labot, core%latop
 
-      do l_2 = core%labot, core%latop
+        pk = core%pw(l_1, s)
+        mk = get_ang_mom_proj(pk)
 
-        pl = core%pw(l_2)
-        ml = get_ang_mom_proj(pl)
+        do l_2 = core%labot, core%latop
 
-        call V12me(pi, pk, pl, pj, mi, mk, ml, mj, temp)
+          pl = core%pw(l_2, s)
+          ml = get_ang_mom_proj(pl)
 
-        K_ij = K_ij + temp
+          call V12me(pi, pk, pl, pj, mi, mk, ml, mj, temp)
+
+          K_ij = K_ij + temp
+
+        end do
 
       end do
 
@@ -244,9 +253,11 @@ contains
   end function potential_me
 
 !> read_from
-!>  reads core radial wavefunctions (partial wave expansions) from a given file
+!>  Reads core radial wavefunctions (partial wave expansions) from a given file.
 !>  The wave functions are then interpolated to be plotted on a new
 !>  grid.
+!>  The partial wave pw(:, l, s) is the l-th partial wave of the s-th spatial
+!>  orbiatl.
   subroutine read_from (core, filepath)
     class(core_state)  , intent(inout) :: core
     character(len = *) , intent(in)    :: filepath
@@ -254,12 +265,12 @@ contains
     logical                            :: file_exists
     integer                            :: temp_nr
     real*8             , allocatable   :: temp_grid(:)
-    real*8             , allocatable   :: temp_pw(:, :)
-    real*8             , allocatable   :: intpl_pw(:, :)
+    real*8             , allocatable   :: temp_pw(:, :, :)
+    real*8             , allocatable   :: intpl_pw(:, :, :)
     integer                            :: mini, maxi
     logical                            :: grid_cutoff_located
     integer                            :: grid_cutoff
-    integer                            :: l, lambda, ii
+    integer                            :: s, l, lambda, ii
 
     !< check if file exists
     write (*, *) "reading core wavefunctions from ", filepath
@@ -326,35 +337,49 @@ contains
     end do
 
     !< allocate partial wave arrays
-    allocate(temp_pw(1:temp_nr, core%labot:core%latop))
-    allocate(intpl_pw(1:grid%nr, core%labot:core%latop))
+    allocate(temp_pw(1:temp_nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
+    allocate(intpl_pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
 
     !< partial waves (plotted on original grid)
-    do l = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      read(unitno, *) temp_pw(:, l)
+      do l = core%labot, core%latop
+
+        read(unitno, *) temp_pw(:, l, s)
+
+      end do
 
     end do
 
     !< plot partial waves on current grid by interpolating
-    do l = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      call intrpl(temp_nr, temp_grid, temp_pw(:, l), &
-          grid_cutoff, grid%gridr(1:grid_cutoff), intpl_pw(1:grid_cutoff, l))
+      do l = core%labot, core%latop
 
-      intpl_pw(grid_cutoff:grid%nr, l) = 0.0
+        call intrpl(temp_nr, temp_grid, temp_pw(:, l, s), &
+            grid_cutoff, grid%gridr(1:grid_cutoff), &
+            intpl_pw(1:grid_cutoff, l, s))
+
+        intpl_pw(grid_cutoff:grid%nr, l, s) = 0.0
+
+      end do
 
     end do
 
     !< store partial waves as sturmian_nr type
-    allocate(core%pw(core%labot:core%latop))
+    allocate(core%pw(core%labot:core%latop, 1:(core%n_e + 1) / 2))
 
-    do l = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      call minmaxi(intpl_pw(:, l), grid%nr, mini, maxi)
-      write (*, '(i2, 2i6)') l, mini, maxi
+      do l = core%labot, core%latop
 
-      call init_function(core%pw(l), l, core%m, 1, mini, maxi, intpl_pw(:, l), grid%nr)
+        call minmaxi(intpl_pw(:, l, s), grid%nr, mini, maxi)
+        write (*, '(2i2, 2i6)') s, l, mini, maxi
+
+        call init_function(core%pw(l, s), l, core%m, 1, mini, maxi, &
+            intpl_pw(:, l, s), grid%nr)
+
+      end do
 
     end do
 
@@ -398,9 +423,9 @@ contains
   subroutine write_pw_to (core, filepath)
     class(core_state)  , intent(inout) :: core
     character(len = *) , intent(in)    :: filepath
-    real*8             , allocatable   :: pw(:, :)
+    real*8             , allocatable   :: pw(:, :, :)
     integer                            :: unitno
-    integer                            :: l, ii
+    integer                            :: s, l, ii
 
     write (*, *) "writing core wavefunctions (for gnuplot)"
 
@@ -411,13 +436,14 @@ contains
     open(unitno, file = filepath)
 
     !< write partial waves to file
-    allocate(pw(1:grid%nr, core%labot:core%latop))
+    allocate(pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
     call core%get_pw_functions(pw)
 
     write (*, *) "writing partial waves"
     do ii = 1, grid%nr
 
-      write(unitno, *) grid%gridr(ii), pw(ii, core%labot:core%latop)
+      write(unitno, *) grid%gridr(ii), pw(ii, core%labot:core%latop, &
+          1:(core%n_e + 1) / 2)
 
     end do
 
@@ -502,29 +528,33 @@ contains
 !> calculate spectroscopic factors & print to screen
   subroutine calc_spectroscopic_factors (core)
     class(core_state) , intent(inout) :: core
-    real*8           , allocatable   :: spectroscopic(:)
-    real*8           , allocatable   :: pw(:, :)
-    integer                          :: l
+    real*8           , allocatable   :: spectroscopic(:, :)
+    real*8           , allocatable   :: pw(:, :, :)
+    integer                          :: s, l
 
     write (*, *) "calculating spectroscopic factors"
 
     !< extract partial waves
-    allocate(pw(1:grid%nr, core%labot:core%latop))
+    allocate(pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
     call core%get_pw_functions(pw)
 
     !< spectroscopic factors
-    allocate(spectroscopic(core%labot:core%latop))
-    spectroscopic(:) = 0.0
+    allocate(spectroscopic(core%labot:core%latop, 1:(core%n_e + 1) / 2))
+    spectroscopic(:, :) = 0.0
 
-    do l = core%labot, core%latop
+    do s = 1, (core%n_e + 1) / 2
 
-      spectroscopic(l) = sum(pw(:, l) * pw(:, l) * grid%weight(:))
+      do l = core%labot, core%latop
 
-      write (*, '(i4, f15.8)') l, spectroscopic(l)
+        spectroscopic(l, s) = sum(pw(:, l, s) * pw(:, l, s) * grid%weight(:))
+
+        write (*, '(2i4, f15.8)') s, l, spectroscopic(l, s)
+
+      end do
+
+      write (*, '(a, f15.8)') " sum", sum(spectroscopic(:, s))
 
     end do
-
-    write (*, '(a, f15.8)') " sum", sum(spectroscopic(:))
 
     !< empty line
     write (*, *) "done"
@@ -539,13 +569,13 @@ contains
 !>  V_pw      V_pw(:, l) is the l-th partial wave of the core potential
   subroutine calc_coulomb_potential (core)
     type(core_state) , intent(inout) :: core
-    real*8           , allocatable   :: pw(:, :)
+    real*8           , allocatable   :: pw(:, :, :)
     integer                          :: mini1, maxi1, mini2, maxi2
     integer                          :: minf1, maxf1, minf2, maxf2
     real*8           , allocatable   :: integral(:)
     real*8           , allocatable   :: temp(:)
     integer                          :: lambda, lambda_min, lambda_max
-    integer                          :: l_1, l_2
+    integer                          :: s, l_1, l_2
     real*8                           :: Yint, harmonic
     integer                          :: ii, jj
 
@@ -556,7 +586,7 @@ contains
     lambda_max = 2 * core%latop
 
     !< extract partial waves
-    allocate(pw(1:grid%nr, core%labot:core%latop))
+    allocate(pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
     call core%get_pw_functions(pw)
 
     !< temporary arrays
@@ -566,41 +596,45 @@ contains
     !< lambda potential
     core%coulomb_pw(:, :) = 0.0
 
-    do lambda = lambda_min, lambda_max
+    do s = 1, (core%n_e + 1) / 2
 
-      do l_1 = core%labot, core%latop
+      do lambda = lambda_min, lambda_max
 
-        call minmaxi(pw(:, l_1), grid%nr, mini1, maxi1)
+        do l_1 = core%labot, core%latop
 
-        do l_2 = core%labot, core%latop
+          call minmaxi(pw(:, l_1, s), grid%nr, mini1, maxi1)
 
-          call minmaxi(pw(:, l_2), grid%nr, mini2, maxi2)
+          do l_2 = core%labot, core%latop
 
-          minf1 = max(mini1, mini2)
-          maxf1 = min(maxi1, maxi2)
+            call minmaxi(pw(:, l_2, s), grid%nr, mini2, maxi2)
 
-          temp(:) = 0.0
-          integral(:) = 0.0
+            minf1 = max(mini1, mini2)
+            maxf1 = min(maxi1, maxi2)
 
-          temp(minf1:maxf1) = pw(minf1:maxf1, l_1) * pw(minf1:maxf1, l_2) &
-              * grid%weight(minf1:maxf1)
+            temp(:) = 0.0
+            integral(:) = 0.0
 
-          harmonic = Yint(&
-              dble(l_1), dble(core%m), &
-              dble(lambda), dble(0), &
-              dble(l_2), dble(core%m))
+            temp(minf1:maxf1) = pw(minf1:maxf1, l_1, s) * &
+                pw(minf1:maxf1, l_2, s) * grid%weight(minf1:maxf1)
 
-          ! do ii = 1, grid%nr
+            harmonic = Yint(&
+                dble(l_1), dble(core%m), &
+                dble(lambda), dble(0), &
+                dble(l_2), dble(core%m))
 
-          !   integral(ii) = sum(temp(mini:maxi) * laplace(mini:maxi, ii, lambda))
+            ! do ii = 1, grid%nr
 
-          ! end do
+            !   integral(ii) = sum(temp(mini:maxi) * laplace(mini:maxi, ii, lambda))
 
-          call form(lambda, temp(:), minf1, maxf1, grid%nr, integral(:), minf2, maxf2)
+            ! end do
 
-          core%coulomb_pw(minf2:maxf2, lambda) = &
-              core%coulomb_pw(minf2:maxf2, lambda) + &
-              (2.0 * integral(minf2:maxf2) * harmonic)
+            call form(lambda, temp(:), minf1, maxf1, grid%nr, integral(:), minf2, maxf2)
+
+            core%coulomb_pw(minf2:maxf2, lambda) = &
+                core%coulomb_pw(minf2:maxf2, lambda) + &
+                (2.0 * integral(minf2:maxf2) * harmonic)
+
+          end do
 
         end do
 
