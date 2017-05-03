@@ -523,8 +523,6 @@ contains
     call write_value(energy_hf)
     write (*, *)
 
-  contains
-
   end subroutine write_energy
 
 
