@@ -216,23 +216,23 @@ contains
 
     do s = 1, (core%n_e + 1) / 2
 
-      do l_1 = core%labot, core%latop
+    do l_1 = core%labot, core%latop
 
-        pk = core%pw(l_1, s)
-        mk = get_ang_mom_proj(pk)
+      pk = core%pw(l_1, s)
+      mk = get_ang_mom_proj(pk)
 
-        do l_2 = core%labot, core%latop
+      do l_2 = core%labot, core%latop
 
-          pl = core%pw(l_2, s)
-          ml = get_ang_mom_proj(pl)
+        pl = core%pw(l_2, s)
+        ml = get_ang_mom_proj(pl)
 
-          call V12me(pi, pk, pl, pj, mi, mk, ml, mj, temp)
+        call V12me(pi, pk, pl, pj, mi, mk, ml, mj, temp)
 
-          K_ij = K_ij + temp
-
-        end do
+        K_ij = K_ij + temp
 
       end do
+
+    end do
 
     end do
 
@@ -247,8 +247,7 @@ contains
     real*8                                   :: VLambdaR_ME
 
     V_ij = core%coulomb_me(pi, pj) + core%exchange_me(pi, pj)
-    ! + &
-        ! VLambdaR_ME(pi, pj, core%m)
+        ! + VLambdaR_ME(pi, pj, core%m)
 
   end function potential_me
 
@@ -527,7 +526,7 @@ contains
 
 !> calculate spectroscopic factors & print to screen
   subroutine calc_spectroscopic_factors (core)
-    class(core_state) , intent(inout) :: core
+    type(core_state) , intent(inout) :: core
     real*8           , allocatable   :: spectroscopic(:, :)
     real*8           , allocatable   :: pw(:, :, :)
     integer                          :: s, l
