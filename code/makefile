@@ -7,9 +7,9 @@ FFLAGS := \
 	-pedantic -Wfunction-elimination -Waliasing \
 	-Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
 	-Wimplicit-procedure -Wimplicit-interface \
-	-g -fcheck=all -fdump-tree-original \
+	# -g -fcheck=all -fdump-tree-original \
 	-fmodule-private -fall-intrinsics -ffree-line-length-none -fno-align-commons \
-	-fopenmp -O2
+	-fopenmp -O2 -fast
 
 # -- object files
 OBJ := rsg.o \
