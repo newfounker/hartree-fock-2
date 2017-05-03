@@ -67,6 +67,7 @@ contains
     real*8                  , intent(in)  :: S(:, :)
     real*8                  , allocatable :: V(:, :)
     real*8                  , allocatable :: C(:, :), w(:)
+    type(sturmian_nr)       , pointer     :: pi, pj
     integer                               :: ierr
     integer                               :: ii, jj
 
@@ -80,7 +81,10 @@ contains
 
       do jj = 1, nd
 
-        V(ii, jj) = core%potential_me(basis%b(no(ii)), basis%b(no(jj)))
+        pi => basis%b(no(ii))
+        pj => basis%b(no(jj))
+
+        V(ii, jj) = core%potential_me(pi, pj)
 
       end do
 
