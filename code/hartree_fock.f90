@@ -618,6 +618,7 @@ contains
     open (unitno, file = filepath)
 
     write(unitno, *) data_in%target
+    write(unitno, *) data_in%n_e
     write(unitno, *) m
     write(unitno, *) parity
     write(unitno, *) dble(0.5)

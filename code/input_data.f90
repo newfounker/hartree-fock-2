@@ -69,7 +69,7 @@ contains
     unitno = 1000
     write (*, *) "opening ", filepath
 
-    open(unitno, file = filepath, action = 'read')
+    open(unitno, file = filepath, action = 'read', iostat = io_stat)
 
     if (io_stat /= 0) then
 

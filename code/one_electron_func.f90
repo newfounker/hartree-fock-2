@@ -190,11 +190,11 @@ subroutine construct_1el_basis_nr(Number_one_electron_func, output_dir)
 
         call hf_procedure(bst, nd, no, ma, ipar, H, CI, w, output_dir//"/hf_results.dat")
 
-        ! call core%read_from(output_dir//"/hf_results.dat")
-        ! call core%write_pw_to(output_dir//"/core_plots.dat")
-        ! call core%write_coulomb_pw_to(output_dir//"/core_coulomb.dat")
-        ! call core%write_potential_pw_to(output_dir//"/core_potential.dat")
-        ! call core_spectrum(core, bst, nd, no, H, b)
+        call core%read_from(output_dir//"/hf_results.dat")
+        call core%write_pw_to(output_dir//"/core_plots.dat")
+        call core%write_coulomb_pw_to(output_dir//"/core_coulomb.dat")
+        call core%write_potential_pw_to(output_dir//"/core_potential.dat")
+        call core_spectrum(core, bst, nd, no, H, b)
 
 !!$ Create basis of 1-electron pseudostates from Laguere basis and CI coef.
 

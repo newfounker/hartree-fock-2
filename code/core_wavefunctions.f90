@@ -1,7 +1,7 @@
 module core_wavefunctions
 
-!> + add electron + nuclear potential as member
-!> + related to prior // obtain new potential (or interpolate old?)
+!> - coulomb_pw -> form subroutine
+
 !> - symmetry check in spectrum
 !> - in potential_me adjust for nuclear term
 !> - modify for multiple electronic orbitals
@@ -24,6 +24,7 @@ module core_wavefunctions
     private
 
     character*10                    :: target
+    integer                         :: n_e
     integer                         :: m
     integer                         :: parity
     real*8                          :: spin
@@ -249,7 +250,7 @@ contains
   subroutine read_from (core, filepath)
     class(core_state)  , intent(inout) :: core
     character(len = *) , intent(in)    :: filepath
-    integer                            :: unitno
+    integer                            :: unitno, io_stat
     logical                            :: file_exists
     integer                            :: temp_nr
     real*8             , allocatable   :: temp_grid(:)
@@ -277,10 +278,19 @@ contains
     unitno = 1000
     write (*, *) "opening ", filepath
 
-    open(unitno, file = filepath, action = 'read')
+    open(unitno, file = filepath, action = 'read', iostat = io_stat)
+
+    if (io_stat /= 0) then
+
+      write (*, *) filepath, " cannot be opened"
+
+      stop
+
+    end if
 
     !< read state information
     read(unitno, *) core%target
+    read(unitno, *) core%n_e
     read(unitno, *) core%m
     read(unitno, *) core%parity
     read(unitno, *) core%spin
@@ -491,7 +501,7 @@ contains
 
 !> calculate spectroscopic factors & print to screen
   subroutine calc_spectroscopic_factors (core)
-    type(core_state) , intent(inout) :: core
+    class(core_state) , intent(inout) :: core
     real*8           , allocatable   :: spectroscopic(:)
     real*8           , allocatable   :: pw(:, :)
     integer                          :: l
@@ -529,10 +539,9 @@ contains
 !>  V_pw      V_pw(:, l) is the l-th partial wave of the core potential
   subroutine calc_coulomb_potential (core)
     type(core_state) , intent(inout) :: core
-    real*8           , allocatable   :: laplace(:, :, :)
     real*8           , allocatable   :: pw(:, :)
     integer                          :: mini1, maxi1, mini2, maxi2
-    integer                          :: mini, maxi
+    integer                          :: minf1, maxf1, minf2, maxf2
     real*8           , allocatable   :: integral(:)
     real*8           , allocatable   :: temp(:)
     integer                          :: lambda, lambda_min, lambda_max
@@ -545,33 +554,6 @@ contains
     !< summed over radial potential
     lambda_min = 0
     lambda_max = 2 * core%latop
-
-    allocate(laplace(1:grid%nr, 1:grid%nr, lambda_min:lambda_max))
-
-    !< laplace potential
-    laplace(:, :, :) = 0.0
-
-    do lambda = lambda_min, lambda_max
-
-      do ii = 1, grid%nr
-
-        do jj = 1, ii
-
-          laplace(jj, ii, lambda) = (grid%gridr(jj) ** lambda) / &
-              (grid%gridr(ii) ** (lambda + 1))
-
-        end do
-
-        do jj = ii + 1, grid%nr
-
-          laplace(jj, ii, lambda) = (grid%gridr(ii) ** lambda) / &
-              (grid%gridr(jj) ** (lambda + 1))
-
-        end do
-
-      end do
-
-    end do
 
     !< extract partial waves
     allocate(pw(1:grid%nr, core%labot:core%latop))
@@ -594,27 +576,31 @@ contains
 
           call minmaxi(pw(:, l_2), grid%nr, mini2, maxi2)
 
-          mini = max(mini1, mini2)
-          maxi = min(maxi1, maxi2)
+          minf1 = max(mini1, mini2)
+          maxf1 = min(maxi1, maxi2)
 
           temp(:) = 0.0
           integral(:) = 0.0
 
-          temp(mini:maxi) = pw(mini:maxi, l_1) * pw(mini:maxi, l_2) * grid%weight(mini:maxi)
+          temp(minf1:maxf1) = pw(minf1:maxf1, l_1) * pw(minf1:maxf1, l_2) &
+              * grid%weight(minf1:maxf1)
 
           harmonic = Yint(&
               dble(l_1), dble(core%m), &
               dble(lambda), dble(0), &
               dble(l_2), dble(core%m))
 
-          do ii = 1, grid%nr
+          ! do ii = 1, grid%nr
 
-            integral(ii) = sum(temp(mini:maxi) * laplace(mini:maxi, ii, lambda))
+          !   integral(ii) = sum(temp(mini:maxi) * laplace(mini:maxi, ii, lambda))
 
-          end do
+          ! end do
 
-          core%coulomb_pw(:, lambda) = core%coulomb_pw(:, lambda) + &
-              2.0 * integral(:) * harmonic
+          call form(lambda, temp(:), minf1, maxf1, grid%nr, integral(:), minf2, maxf2)
+
+          core%coulomb_pw(minf2:maxf2, lambda) = &
+              core%coulomb_pw(minf2:maxf2, lambda) + &
+              (2.0 * integral(minf2:maxf2) * harmonic)
 
         end do
 

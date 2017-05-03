@@ -11,7 +11,7 @@ template () {
     echo "He2" >> $file
     echo "2.0, 2.0, 0.0" >> $file
     echo "${rd}, 0.5" >> $file
-    echo "0, 4" >> $file
+    echo "0, 2" >> $file
     echo "15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5" >> $file
     echo "100.0, 20.0, 8, 32, 6, 20" >> $file
     echo "1.0e-20, 1.0e-20, 1.0e-20" >> $file
@@ -47,7 +47,7 @@ step="$(awk "BEGIN{ printf \"%.10f\n\", ($rd_max - $rd_min)/$n }")"
 ii=0
 while [ $ii -lt $n ]
 do
-    printf "${ii} of ${n}"
+    printf "${ii} of ${n}\n"
 
     rd="$(awk "BEGIN{ printf \"%.10f\n\", $rd_min + ($ii * $step) }")"
 
