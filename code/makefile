@@ -1,14 +1,30 @@
-# -- compilation flags
-
-FC = gfortran
-
-FFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
-	-Wimplicit-procedure -Wimplicit-interface \
-	-fopenmp -O3 -ffast-math \
-	-fall-intrinsics -ffree-line-length-none
+# -- unoptimised compilation
+	# -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
+	# -Wimplicit-procedure -Wimplicit-interface \
+	# -fopenmp -O3 -ffast-math \
+	# -fall-intrinsics -ffree-line-length-none
 	# -Wall -pedantic -Wextra -Waliasing -Wsurprising -Wfunction-elimination \
 	# -fmodule-private -fall-intrinsics -ffree-line-length-none
 	# -g -fcheck=all -fdump-tree-original \
+
+# -- optimised ifortran flags
+IFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
+	-Wimplicit-procedure -Wimplicit-interface \
+	-fall-intrinsics -ffree-line-length-none \
+	-fopenmp -O3 -ffast-math -xHost -ipo -mcmodel=medium -shared-intel
+
+FC = ifort
+FFLAGS = $(IFLAGS)
+
+# -- optimised gfortran compilations
+GFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
+	-Wimplicit-procedure -Wimplicit-interface \
+	-fall-intrinsics -ffree-line-length-none
+	-fopenmp -O3 -ffast-math -mtune=native -fwhole-program -combine \
+	-mcmodel=medium
+
+FC = gfortran
+FFLAGS = $(GFLAGS)
 
 # -- object files
 OBJ = rsg.o \

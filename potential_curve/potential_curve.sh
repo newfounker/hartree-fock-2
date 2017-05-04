@@ -68,6 +68,7 @@ do
         printf "$(sed '7q;d' ${results})" >> ${curve}
 
         true $(( jj++ ))
+        true $(( jj++ ))
     done
 
     printf "\n" >> ${curve}

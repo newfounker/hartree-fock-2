@@ -37,30 +37,4 @@
 # plots
 
   set title "HF Energy of Diatomic Helium (++) against Radial Separation"
-  plot for [i = 2:n] curve u 1:i ls i lw 2 t sprintf("%i", i-2)
-
-  # set multiplot layout 2, 2 title sprintf("Partial Waves for {/Symbol l} = 0, ..., %i", n-2)
-
-  # set title "{{/Symbol Y}_{/Symbol l}}(r)"
-  # set yrange [*:*]
-  # plot \
-  #   for [i = 2:n] wavefunctions u 1:i ls i lw 2 t sprintf("%i", i-2)
-
-  # set title "{|{/Symbol Y}_{/Symbol l}|}^{2}(r)"
-  # set yrange [*:*]
-  # plot \
-  #   for [i = 2:n] wavefunctions u 1:(column(i) ** 2) ls i lw 2 t sprintf("%i", i-2)
-
-  # set title "{J_{/Symbol l}}(r)"
-  # set yrange [0:3]
-  # plot \
-  #   for [i = 2:n] coulomb u 1:i ls i lw 2 t sprintf("%i", i-2), \
-  #   coulomb u 1:(2*J(column(1))) lc black lw 2 t sprintf("2/r")
-
-  # set title "{V_{/Symbol l}}(r)"
-  # set yrange [-3:0]
-  # plot \
-  #   for [i = 2:n] potential u 1:i ls i lw 2 t sprintf("%i", i-2), \
-  #   coulomb u 1:(-2*J(column(1))) lc black lw 2 t sprintf("-2/r")
-
-  # unset multiplot
+  plot for [i = 2:n] curve u 1:i ls i lw 2 t sprintf("l = %i", 2*(i-2))
