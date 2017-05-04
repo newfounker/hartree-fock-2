@@ -5,14 +5,16 @@ template () {
 
     file=$1
     rd=$2
+    ltop=$3
 
     > $file
 
     echo "He2" >> $file
     echo "2.0, 2.0, 0.0" >> $file
     echo "${rd}, 0.5" >> $file
-    echo "0, 2" >> $file
-    echo "15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5 , 15,1.5" >> $file
+    echo "0, ${ltop}" >> $file
+    # echo "30,1.5 , 30,1.5 , 25,1.5 , 25,1.5 , 20,1.5 , 20,1.5 , 15,1.5 , 15,1.5 , 10,1.5" >> $file
+    echo "10,1.5 ,  10,1.5 ,  10,1.5 ,  10,1.5 ,  10,1.5 ,  10,1.5 ,  10,1.5 ,  10,1.5" >> ${file}
     echo "100.0, 20.0, 8, 32, 6, 20" >> $file
     echo "1.0e-20, 1.0e-20, 1.0e-20" >> $file
     echo "0, 0" >> $file
@@ -35,7 +37,8 @@ curve="${output_dir}/curve.dat"
 # command-line parameters
 rd_min="$1"
 rd_max="$2"
-n="$3"
+l_max="$3"
+n="$4"
 
 # radial-distance step
 step="$(awk "BEGIN{ printf \"%.10f\n\", ($rd_max - $rd_min)/$n }")"
@@ -45,18 +48,30 @@ step="$(awk "BEGIN{ printf \"%.10f\n\", ($rd_max - $rd_min)/$n }")"
 
 # loop over radial-distance values
 ii=0
-while [ $ii -lt $n ]
+while [ $ii -lt ${n} ]
 do
-    printf "${ii} of ${n}\n"
-
     rd="$(awk "BEGIN{ printf \"%.10f\n\", $rd_min + ($ii * $step) }")"
 
-    template ${data} ${rd}
+    printf "${rd} " >> ${curve}
 
-    ./hf_main "${input_dir}" "${output_dir}" > /dev/null
+    # loop over angular-momentum values
+    jj=0
+    while [ $jj -lt ${l_max} ]
+    do
+        printf "\r(${ii} / ${n}) , (${jj} / ${l_max})"
 
-    # assuming energy is 7-th line in hf_results.dat
-    echo ${rd} $(sed '7q;d' ${results}) >> "${curve}"
+        template ${data} ${rd} ${jj}
+
+        ./hf_main "${input_dir}" "${output_dir}" > /dev/null
+
+        # assuming energy is 7-th line in hf_results.dat
+        printf "$(sed '7q;d' ${results})" >> ${curve}
+
+        true $(( jj++ ))
+    done
+
+    printf "\n" >> ${curve}
+    printf "\n"
 
     true $(( ii++ ))
 done
