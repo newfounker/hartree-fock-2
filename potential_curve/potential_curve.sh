@@ -56,7 +56,7 @@ do
 
     # loop over angular-momentum values
     jj=0
-    while [ $jj -lt ${l_max} ]
+    while ! [ $jj -gt ${l_max} ]
     do
         printf "\r(${ii} / ${n}) , (${jj} / ${l_max})"
 
