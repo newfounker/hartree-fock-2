@@ -55,7 +55,8 @@ do
 
     ./hf_main "${input_dir}" "${output_dir}" > /dev/null
 
-    echo ${rd} $(sed '6q;d' ${results}) >> "${curve}"
+    # assuming energy is 7-th line in hf_results.dat
+    echo ${rd} $(sed '7q;d' ${results}) >> "${curve}"
 
     true $(( ii++ ))
 done
