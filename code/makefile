@@ -13,15 +13,14 @@ IFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
 	-fall-intrinsics -ffree-line-length-none \
 	-fopenmp -O3 -ffast-math -xHost -ipo -mcmodel=medium -shared-intel
 
-FC = ifort
-FFLAGS = $(IFLAGS)
+# FC = ifort
+# FFLAGS = $(IFLAGS)
 
 # -- optimised gfortran compilations
 GFLAGS = -Warray-bounds -Warray-temporaries -Wrealloc-lhs-all -fbounds-check \
 	-Wimplicit-procedure -Wimplicit-interface \
-	-fall-intrinsics -ffree-line-length-none
-	-fopenmp -O3 -ffast-math -mtune=native -fwhole-program -combine \
-	-mcmodel=medium
+	-fall-intrinsics -ffree-line-length-none \
+	-fopenmp -O3 -ffast-math
 
 FC = gfortran
 FFLAGS = $(GFLAGS)
