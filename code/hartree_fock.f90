@@ -11,28 +11,36 @@ module hartree_fock
 
 contains
 
-  subroutine hf_procedure (basis, m, parity, H, C, w, filepath)
+!> Performs Hartree-Fock procedure assuming that the basis has already been
+!> diagonalised, and that the hamiltonian contains
+  subroutine hf_procedure (basis, H, m, filepath)
     type(basis_sturmian_nr) , intent(in)    :: basis
-    integer                 , intent(in)    :: m
-    integer                 , intent(in)    :: parity
     real*8                  , intent(in)    :: H(:, :)
-    real*8                  , intent(inout) :: C(:, :)
-    real*8                  , intent(inout) :: w(:)
+    integer                 , intent(in)    :: m
     character(len = *)      , intent(in)    :: filepath
     real*8                  , allocatable   :: integrals(:, :, :, :)
+    real*8                  , allocatable   :: C(:, :)
     real*8                  , allocatable   :: P(:, :)
     real*8                  , allocatable   :: G(:, :)
     real*8                  , allocatable   :: F(:, :)
+    real*8                  , allocatable   :: w(:)
     real*8                                  :: hf_energy
     logical                                 :: converged
     integer                                 :: n, ii
 
+    write (*, "(a)") "> hartree-fock procedure"
+    write (*, "(a, a)") &
+        " target: ", trim(data_in%target)
+    write (*, *)
+
     n = basis_size(basis)
 
     allocate(integrals(1:n, 1:n, 1:n, 1:n))
+    allocate(C(1:n, 1:n))
     allocate(P(1:n, 1:n))
     allocate(G(1:n, 1:n))
     allocate(F(1:n, 1:n))
+    allocate(w(1:n))
 
     if (data_in%n_e >= 2) then
 
@@ -40,6 +48,7 @@ contains
 
     end if
 
+    C(:, :) = 0.0
     P(:, :) = 0.0
     G(:, :) = 0.0
     F(:, :) = 0.0
@@ -61,7 +70,7 @@ contains
     hf_energy = (data_in%Z1 * data_in%Z2 / data_in%Rd) + &
         calc_electronic_energy (data_in%n_e, C, P, H, F)
 
-    call hf_write_results(basis, m, parity, C, hf_energy, filepath)
+    call hf_write_results(basis, C, hf_energy, m, filepath)
 
   end subroutine hf_procedure
 
@@ -96,9 +105,9 @@ contains
     integer                 :: iter
     integer                 :: ii
 
-    write (*, '(a, a, a, i2, a)') &
-        'hartree-fock procedure for ', trim(data_in%target), &
-        ' with ', n_e, ' electron(s)'
+    write (*, "(a, i3)") ">> hartree-fock iterative scheme"
+    write (*, "(a, i4)") &
+        " electrons: ", n_e
 
     K = size(C, 1)
 
@@ -131,7 +140,8 @@ contains
 
       P(:, :) = P_iter(iter, :, :)
 
-      write (*, '(a, i4, a)') ' converged after ', iter, ' iterations'
+      write (*, "(a, i5)") &
+          " iterations: ", iter
 
     else
 
@@ -303,10 +313,8 @@ contains
     real*8                :: std_dev
 
     std_dev = sqrt(sum((P(iter, :, :) - P(iter - 1, :, :)) ** 2)) / size(P, 2)
-    write (*, '(a, es10.3)') &
-        ' std. dev: ', std_dev
-
-    ! call print_matrix(P_iter(iter, :, :) - P_iter(iter - 1, :, :))
+    write (*, '(a, es10.2)') &
+        ' std. dev.: ', std_dev
 
   end function check_std_dev
 
@@ -331,10 +339,13 @@ contains
 
     lwrite = .false.
 
-    write (*, '(a)') &
-        "commencing two-electron integrals"
-    write (*, '(a, i10)') &
-        " unique integrals:  ", (n ** 4) / 4
+    write (*, "(a)") ">> two-electron integrals"
+    write (*, '(a, es10.3)') &
+        " basis size:        ", 1.0 * n
+    write (*, '(a, es10.3)') &
+        " integrals:         ", (n ** 4) / 1.0
+    write (*, '(a, es10.3)') &
+        " unique integrals:  ", (n ** 4) / 4.0
     write (*, '(a)') &
         " estimated time (s) "
     write (*, '(a, i6)') &
@@ -352,7 +363,9 @@ contains
 
     calculated = .false.
 
-    !$omp parallel do private(ii, jj, kk, ll, pi, pj, pk, pl) shared(basis, integrals, calculated)
+    !$omp parallel do &
+    !$omp& private(ii, jj, kk, ll, pi, pj, pk, pl)
+    !$omp& shared(basis, integrals, calculated)
     do ii = 1, n
 
       pi => basis%b(ii)
@@ -483,7 +496,7 @@ contains
     call set_fock(H, G, F)
 
     !< print energies
-    write (*, '(a)') 'hartree-fock energies'
+    write (*, '(a)') '>> energies'
 
     !< nuclear
     if ((data_in%Z1 < 1.0e-5) .or. (data_in%Z2 < 1.0e-5) &
@@ -571,12 +584,11 @@ contains
 
 !> writes hartree_fock results to file
 !>  temp(n, l, :) is the plot of the n-th spatial orbital's l-th partial wave.
-  subroutine hf_write_results (basis, m, parity, C, hf_energy, filepath)
+  subroutine hf_write_results (basis, C, hf_energy, m, filepath)
     type(basis_sturmian_nr) , intent(in)  :: basis
-    integer                 , intent(in)  :: m
-    integer                 , intent(in)  :: parity
     real*8                  , intent(in)  :: C(:, :)
     real*8                  , intent(in)  :: hf_energy
+    integer                 , intent(in)  :: m
     character(len = *)      , intent(in)  :: filepath
     real*8                  , allocatable :: temp(:, :, :)
     integer                               :: s, l, ii
@@ -617,11 +629,8 @@ contains
     unitno = 1000
     open (unitno, file = filepath)
 
-    write(unitno, *) data_in%target
-    write(unitno, *) data_in%n_e
     write(unitno, *) m
-    write(unitno, *) parity
-    write(unitno, *) dble(0.5)
+    write(unitno, *) data_in%n_e
     write(unitno, *) data_in%labot, data_in%latop
     write(unitno, *) hf_energy
 

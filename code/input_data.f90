@@ -9,32 +9,32 @@ module input_data
   public:: readin
 
   type input
-      character*10     :: target           ! label of target
+    character*10     :: target           ! label of target
 
-      real*8           :: Z1, Z2, Zasym    ! diatomic charges, total charges
-      real*8           :: Rd               ! inter-nuclear distance
-      real*8           :: origin           ! 0: on Z1, 0.5: middle, 1: on Z2
+    real*8           :: Z1, Z2, Zasym    ! diatomic charges, total charges
+    real*8           :: Rd               ! inter-nuclear distance
+    real*8           :: origin           ! 0: on Z1, 0.5: middle, 1: on Z2
 
-      integer          :: labot, latop     ! min, max atomic ang. mom. (l)
-      integer, pointer :: nps(:)           ! number of basis functions per l
-      real*8,  pointer :: alpha(:)         ! exponential fall-off for each l
+    integer          :: labot, latop     ! min, max atomic ang. mom. (l)
+    integer, pointer :: nps(:)           ! number of basis functions per l
+    real*8,  pointer :: alpha(:)         ! exponential fall-off for each l
 
-      real*8           :: rmax             ! max radial value in grid
-      real*8           :: qmax             ! max momentum integrable over grid
-      integer          :: ndouble          ! number of doubling
-      integer          :: npdbl            ! points per tier in grid
-      integer          :: npwave           ! points per oscillation
-      integer          :: ltmax            ! max l in v(1, 2) expansion
-      real*8           :: formcut
-      real*8           :: regcut
-      real*8           :: expcut
+    real*8           :: rmax             ! max radial value in grid
+    real*8           :: qmax             ! max momentum integrable over grid
+    integer          :: ndouble          ! number of doubling
+    integer          :: npdbl            ! points per tier in grid
+    integer          :: npwave           ! points per oscillation
+    integer          :: ltmax            ! max l in v(1, 2) expansion
+    real*8           :: formcut
+    real*8           :: regcut
+    real*8           :: expcut
 
-      integer          :: Mt_min , Mt_max  ! min, max values of Mt
-      integer, pointer :: nst(:, :)        ! 1e states per m / +- parity
+    integer          :: Mt_min , Mt_max  ! min, max values of Mt
+    integer, pointer :: nst(:, :)        ! 1e states per m / +- parity
 
-      integer          :: n_e              ! number of electrons in molecule
-      integer          :: iter_max         ! maximum number of hf iterations
-      real*8           :: tolerance        ! convergence tolerance of density matrix
+    integer          :: n_e              ! number of electrons in molecule
+    integer          :: iter_max         ! maximum number of hf iterations
+    real*8           :: tolerance        ! convergence tolerance of density matrix
 
   end type input
 
@@ -42,18 +42,17 @@ module input_data
 
 contains
 
-  subroutine readin(self, input_dir, lwrite)
+  subroutine readin(self, filepath, lwrite)
     implicit none
     type(input)                     :: self
-    character(len = *) , intent(in) :: input_dir
+    character(len = *) , intent(in) :: filepath
     logical            , intent(in) :: lwrite      ! T: write to screen, F: dont
-    character(len = 1000)           :: filepath
     logical                         :: file_exists
     integer                         :: unitno
     integer                         :: io_stat
     integer                         :: l, m
 
-    filepath = input_dir//"/data.in"
+    write (*, "(a)") "> input data"
 
     inquire(file = filepath, exist = file_exists)
 
@@ -79,20 +78,15 @@ contains
 
     end if
 
-    write (*, '(a)') 'reading data.in'
+    write (*, *) 'reading ', filepath
+    write (*, *)
 
-    ! reading target
+    ! reading target & charges
     read (unitno, '(a10)') self%target
-
-    if (lwrite) then
-      write (*, '(a, a)') ' target: ', self%target
-      write (*, *)
-    end if
-
-    ! reading charges
     read (unitno, *) self%Z1, self%Z2, self%Zasym
 
     if (lwrite) then
+      write (*, '(a, a)') ' target: ', self%target
       write (*, '(a, f10.5)') ' Z1:    ', self%Z1
       write (*, '(a, f10.5)') ' Z2:    ', self%Z2
       write (*, '(a, f10.5)') ' Zasym: ', self%Zasym
@@ -185,8 +179,6 @@ contains
       write (*, '(a, es10.3)') ' tolerance:   ', self%tolerance
       write (*, *)
     end if
-
-    write (*, *)
 
   end subroutine readin
 

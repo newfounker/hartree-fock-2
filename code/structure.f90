@@ -16,51 +16,32 @@ contains
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !> variable data_in.
 !> Writes the results of the HF procedure to the specified output file
-  subroutine hf_structure ()
+  subroutine hf_structure (m, filepath)
+    integer                 , intent(in)  :: m
+    character(len = *)      , intent(in)  :: filepath
     type(basis_sturmian_nr)               :: basis
-    real*8                  , allocatable :: H(:, :), S(:, :), C(:, :), w(:)
-    integer                               :: n, error, ii
+    real*8                  , allocatable :: H(:, :)
+    integer                               :: n, ii
     type(core_state)                      :: core
-    !< remove this / improve hf_procedure arguments
-    integer                 , allocatable :: no(:)
 
     !< construct basis
     call construct_diagonalised(basis)
 
     n = basis_size(basis)
 
-    !< construct matrices
+    !< construct nuclear hamiltonian matrix
     allocate(H(1:n, 1:n))
-    allocate(S(1:n, 1:n))
-    allocate(C(1:n, 1:n))
-    allocate(w(1:n))
-
     call nuclear_hamiltonian(basis, H)
 
-    S(:, :) = basis%ortint(:, :)
-
-    C(:, :) = 0.0
-
-    w(:) = 0.0
-
-    !< diagonalise with regard to nuclear potential
-    call rsg(n, n, H, S, w, 2, C, error)
-
-    !< remove this / improve hf_procedure arguments
-    allocate(no(1:n))
-    do ii = 1, n
-      no(ii) = ii
-    end do
-
-    !< perform hartree_fock procedure
-    call hf_procedure(basis, 0, 1, H, C, w, "../output/hf_results.dat")
+    !< perform hartree_fock procedure (assuming m = 0)
+    call hf_procedure(basis, H, m, "../output/hf_results.dat")
 
     !< core wavefunctions
     call core%read_from("../output/hf_results.dat")
     call core%write_pw_to("../output/core_plots.dat")
     call core%write_coulomb_pw_to("../output/core_coulomb.dat")
     call core%write_potential_pw_to("../output/core_potential.dat")
-    call core_spectrum(core, basis, n, no, H, S)
+    ! call core_spectrum(core, basis, n, no, H, S)
 
   end subroutine hf_structure
 

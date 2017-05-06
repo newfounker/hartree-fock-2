@@ -72,6 +72,8 @@ subroutine setgrids(self)
   real*8:: hmax, hmin, rdble, rleft, r, dr
   integer:: lna
 
+  write (*, "(a)") "> radial grid"
+
 ! This is r-grid parameters used in setgrids(grid)
   self%npwave = data_in%npwave
   self%npdbl = data_in%npdbl
@@ -197,6 +199,7 @@ subroutine setgrids(self)
 
   end do
 
+  write (*, *) ""
 
 end subroutine setgrids
 

@@ -12,41 +12,48 @@ program main
 !
   integer:: Number_one_electron_func, ipar
 
-  character(len = 200) :: input_dir, output_dir, arg
+  character(len = 200) :: input_filepath, output_filepath, arg
   integer              :: ii
+
+  write (*, "(a)") "> main"
 
   if (command_argument_count() < 2) then
 
-    write (*, '(a)') "missing (2) arguments: input directory and output directory"
-    write (*, '(a)') "assuming default values"
+    write (*, *) "missing (2) arguments: input directory and output directory"
+    write (*, *) "assuming default values"
     write (*, *)
 
-    input_dir = "../input"
-    output_dir = "../output"
+    input_filepath = "../input/input.dat"
+    output_filepath = "../output/hf_results.dat"
 
   else
 
-    call get_command_argument(1, input_dir)
-    call get_command_argument(2, output_dir)
+    call get_command_argument(1, input_filepath)
+    call get_command_argument(2, output_filepath)
 
   end if
 
+  call readin(data_in, trim(input_filepath), .true.)
+
+  call setgrids(grid)
+
+  call construct_vnc(grid%nr, grid%gridr)
+
+  call hf_structure (0, trim(output_filepath))
+
 !------------------------------------------------------------------------
 ! Input data: construct routine for input type.
-  call readin(data_in, trim(input_dir), .true.)
 !
 !-------------------------------------------------------------------------
 ! construct routine for radial grid
-  call setgrids(grid)
 !
 !-------------------------------------------------------------------------
 !
 ! Make non-central local potential
-  call construct_vnc(grid%nr, grid%gridr)
 !
 !??  print*
 
-  call hf_structure ()
+  !< assuming only m = 0 basis functions are used.
 
 !< tom ross: removed for hf_calculation
 ! !??  print*, 'Start structure calculation'
@@ -63,7 +70,7 @@ program main
 !   end do
 
 
-!   call construct_1el_basis_nr(Number_one_electron_func, trim(output_dir))
+!   call construct_1el_basis_nr(Number_one_electron_func, trim(output_filepath))
 
 ! !------------------------------------------
 

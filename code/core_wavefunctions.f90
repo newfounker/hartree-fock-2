@@ -24,13 +24,10 @@ module core_wavefunctions
   type core_state
     private
 
-    character*10                    :: target
-    integer                         :: n_e
     integer                         :: m
-    integer                         :: parity
-    real*8                          :: spin
-    real*8                          :: energy
+    integer                         :: n_e
     integer                         :: labot, latop
+    real*8                          :: energy
     type(sturmian_nr) , allocatable :: pw(:, :)
 
     real*8            , allocatable :: coulomb_pw(:, :)
@@ -273,10 +270,11 @@ contains
     integer                            :: mini, maxi
     logical                            :: grid_cutoff_located
     integer                            :: grid_cutoff
-    integer                            :: s, l, lambda, ii
+    integer                            :: s, l, lambda, ii, kk
 
-    !< check if file exists
-    write (*, *) "reading core wavefunctions from ", filepath
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        reading"
 
     inquire(file = filepath, exist = file_exists)
 
@@ -302,12 +300,12 @@ contains
 
     end if
 
+    !< read file
+    write (*, *) "reading ", filepath
+
     !< read state information
-    read(unitno, *) core%target
-    read(unitno, *) core%n_e
     read(unitno, *) core%m
-    read(unitno, *) core%parity
-    read(unitno, *) core%spin
+    read(unitno, *) core%n_e
     read(unitno, *) core%labot, core%latop
     read(unitno, *) core%energy
 
@@ -372,15 +370,18 @@ contains
     !< store partial waves as sturmian_nr type
     allocate(core%pw(core%labot:core%latop, 1:(core%n_e + 1) / 2))
 
+    kk = 1
     do s = 1, (core%n_e + 1) / 2
 
       do l = core%labot, core%latop
 
         call minmaxi(intpl_pw(:, l, s), grid%nr, mini, maxi)
-        write (*, '(2i2, 2i6)') s, l, mini, maxi
+        ! write (*, '(2i2, 2i6)') s, l, mini, maxi
 
-        call init_function(core%pw(l, s), l, core%m, 1, mini, maxi, &
+        call init_function(core%pw(l, s), l, core%m, kk, mini, maxi, &
             intpl_pw(:, l, s), grid%nr)
+
+        kk = kk + 1
 
       end do
 
@@ -391,7 +392,6 @@ contains
     close(unitno)
 
     !< empty line
-    write (*, *) "done"
     write (*, *)
 
     !< examine spectroscopic factors
@@ -430,7 +430,9 @@ contains
     integer                            :: unitno
     integer                            :: s, l, ii
 
-    write (*, *) "writing core wavefunctions (for gnuplot)"
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        writing spatial orbital partial waves"
 
     !< open file
     unitno = 1000
@@ -455,7 +457,6 @@ contains
     close(unitno)
 
     !< empty line
-    write (*, *) "done"
     write (*, *)
 
   end subroutine write_pw_to
@@ -469,7 +470,10 @@ contains
     integer                            :: unitno
     integer                            :: ii
 
-    write (*, *) "writing electron-electron potential to ", filepath
+
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        writing e-e coulomb potential partial waves"
 
     !< open file
     write (*, *) "opening ", filepath
@@ -489,7 +493,6 @@ contains
     close(unitno)
 
     !< empty line
-    write (*, *) "done"
     write (*, *)
 
   end subroutine write_coulomb_pw_to
@@ -503,7 +506,9 @@ contains
     integer                            :: unitno
     integer                            :: ii
 
-    write (*, *) "writing electron-electron + nuclear potential to ", filepath
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        writing (nuclear + e-e coulomb) potential partial waves"
 
     !< open file
     write (*, *) "opening ", filepath
@@ -523,7 +528,6 @@ contains
     close(unitno)
 
     !< empty line
-    write (*, *) "done"
     write (*, *)
 
   end subroutine write_potential_pw_to
@@ -535,7 +539,9 @@ contains
     real*8           , allocatable   :: pw(:, :, :)
     integer                          :: s, l
 
-    write (*, *) "calculating spectroscopic factors"
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        calculating spectroscopic factors"
 
     !< extract partial waves
     allocate(pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
@@ -545,25 +551,23 @@ contains
     allocate(spectroscopic(core%labot:core%latop, 1:(core%n_e + 1) / 2))
     spectroscopic(:, :) = 0.0
 
-    write (*, '(2a4, a10)') "s", "l", "<l|l>"
-
     do s = 1, (core%n_e + 1) / 2
+
+      write (*, "(a, i2)") &
+          " orbtial: ", s
 
       do l = core%labot, core%latop
 
         spectroscopic(l, s) = sum(pw(:, l, s) * pw(:, l, s) * grid%weight(:))
 
-        write (*, '(2i4, f15.8)') s, l, spectroscopic(l, s)
+        write (*, '(i4, f10.3)') l, spectroscopic(l, s)
 
       end do
 
-      write (*, '(a, f15.8)') " sum", sum(spectroscopic(:, s))
+      write (*, '(a, f10.3)') " sum", sum(spectroscopic(:, s))
+      write (*, *)
 
     end do
-
-    !< empty line
-    write (*, *) "done"
-    write (*, *)
 
   end subroutine calc_spectroscopic_factors
 
@@ -584,7 +588,9 @@ contains
     real*8                           :: Yint, harmonic
     integer                          :: ii, jj
 
-    write (*, *) "calculating coulomb partial waves"
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        calculating e-e coulomb potential partial waves"
 
     !< summed over radial potential
     lambda_min = 0
@@ -627,12 +633,6 @@ contains
                 dble(lambda), dble(0), &
                 dble(l_2), dble(core%m))
 
-            ! do ii = 1, grid%nr
-
-            !   integral(ii) = sum(temp(mini:maxi) * laplace(mini:maxi, ii, lambda))
-
-            ! end do
-
             call form(lambda, temp(:), minf1, maxf1, grid%nr, integral(:), minf2, maxf2)
 
             core%coulomb_pw(minf2:maxf2, lambda) = &
@@ -648,7 +648,6 @@ contains
     end do
 
     !< empty line
-    write (*, *) "done"
     write (*, *)
 
   end subroutine calc_coulomb_potential
