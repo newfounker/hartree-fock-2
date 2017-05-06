@@ -12,69 +12,59 @@ program main
 !
   integer:: Number_one_electron_func, ipar
 
-  character(len = 200) :: input_filepath, output_filepath, arg
+  character(len = 200) :: input_file, hf_file, curve_file
   integer              :: ii
 
   write (*, "(a)") "> main"
 
-  if (command_argument_count() < 2) then
+  if (command_argument_count() < 3) then
 
-    write (*, *) "missing (2) arguments: input directory and output directory"
+    write (*, *) "missing (< 3) arguments (input, hf and potential curve files)"
     write (*, *) "assuming default values"
     write (*, *)
 
-    input_filepath = "../input/input.dat"
-    output_filepath = "../output/hf_results.dat"
+    input_file = "../input/input.dat"
+    hf_file = "../output/hf_results.dat"
+    curve_file = "../output/curve.dat"
 
   else
 
-    call get_command_argument(1, input_filepath)
-    call get_command_argument(2, output_filepath)
+    call get_command_argument(1, input_file)
+    call get_command_argument(2, hf_file)
+    call get_command_argument(3, curve_file)
 
   end if
 
-  call readin(data_in, trim(input_filepath), .true.)
+  write (*, "(a, a)") &
+      " input_file: ", input_file
+  write (*, "(a, a)") &
+      " hf_file:    ", hf_file
+  write (*, "(a, a)") &
+      " curve_file: ", curve_file
+
+
+  call readin(data_in, trim(input_file), .true.)
 
   call setgrids(grid)
 
   call construct_vnc(grid%nr, grid%gridr)
 
-  call hf_structure (0, trim(output_filepath))
+  call hf_structure (0, trim(hf_file))
 
-!------------------------------------------------------------------------
-! Input data: construct routine for input type.
-!
-!-------------------------------------------------------------------------
-! construct routine for radial grid
-!
-!-------------------------------------------------------------------------
-!
-! Make non-central local potential
-!
-!??  print*
+  ! Determine number of one-electron target states
+  Number_one_electron_func = 0
 
-  !< assuming only m = 0 basis functions are used.
+  do ipar= -1, 1, 2
+    Number_one_electron_func = Number_one_electron_func + &
+        SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
 
-!< tom ross: removed for hf_calculation
-! !??  print*, 'Start structure calculation'
-!   ! Determine number of one-electron target states
-!   Number_one_electron_func = 0
+!!$ account for degeneracy of the states with nonzwero M
+    Number_one_electron_func = Number_one_electron_func + &
+        SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
+  end do
 
-!   do ipar= -1, 1, 2
-!     Number_one_electron_func = Number_one_electron_func + &
-!         SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
-
-! !!$ account for degeneracy of the states with nonzwero M
-!     Number_one_electron_func = Number_one_electron_func + &
-!         SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
-!   end do
-
-
-!   call construct_1el_basis_nr(Number_one_electron_func, trim(output_filepath))
-
-! !------------------------------------------
-
-
+  call construct_1el_basis_nr(Number_one_electron_func, &
+      trim(hf_file), trim(curve_file))
 
   stop
 

@@ -14,6 +14,9 @@ module core_wavefunctions
   use target_states
   implicit none
 
+  private
+  public core_state
+
   !< core state
   !<  pw(l, s) is the l-th partial wave (radial function) of the s-th spatial
   !<    orbital (there are (n_e + 1)/2 spatial orbitals.)
