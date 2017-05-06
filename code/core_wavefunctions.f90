@@ -545,6 +545,8 @@ contains
     allocate(spectroscopic(core%labot:core%latop, 1:(core%n_e + 1) / 2))
     spectroscopic(:, :) = 0.0
 
+    write (*, '(2a4, a10)') "s", "l", "<l|l>"
+
     do s = 1, (core%n_e + 1) / 2
 
       do l = core%labot, core%latop

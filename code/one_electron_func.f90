@@ -166,7 +166,7 @@ subroutine construct_1el_basis_nr(Number_one_electron_func, output_dir)
                 !             print'(4i5,2E15.5)', i, j, ni, nj, H(ni,nj), result
 
             end do
-        end do
+          end do
 
         write (*, '(a)') 'symmetry'
         write (*, '(a, i5)') ' m:      ', ma
@@ -187,6 +187,7 @@ subroutine construct_1el_basis_nr(Number_one_electron_func, output_dir)
         write (*, *)
 
         call rsg(nd, nd, H, b, w, 2, CI, ierr)
+        write (*, *) w(1:5)
 
         call hf_procedure(bst, nd, no, ma, ipar, H, CI, w, output_dir//"/hf_results.dat")
 

@@ -11,10 +11,8 @@ module hartree_fock
 
 contains
 
-  subroutine hf_procedure (bst, nd, no, m, parity, H, C, w, filepath)
-    type(basis_sturmian_nr) , intent(in)    :: bst
-    integer                 , intent(in)    :: nd
-    integer                 , intent(in)    :: no(:)
+  subroutine hf_procedure (basis, m, parity, H, C, w, filepath)
+    type(basis_sturmian_nr) , intent(in)    :: basis
     integer                 , intent(in)    :: m
     integer                 , intent(in)    :: parity
     real*8                  , intent(in)    :: H(:, :)
@@ -27,16 +25,18 @@ contains
     real*8                  , allocatable   :: F(:, :)
     real*8                                  :: hf_energy
     logical                                 :: converged
-    integer                                 :: ii
+    integer                                 :: n, ii
 
-    allocate(integrals(1:nd, 1:nd, 1:nd, 1:nd))
-    allocate(P(1:nd, 1:nd))
-    allocate(G(1:nd, 1:nd))
-    allocate(F(1:nd, 1:nd))
+    n = basis_size(basis)
+
+    allocate(integrals(1:n, 1:n, 1:n, 1:n))
+    allocate(P(1:n, 1:n))
+    allocate(G(1:n, 1:n))
+    allocate(F(1:n, 1:n))
 
     if (data_in%n_e >= 2) then
 
-      call set_integrals(bst, nd, no, m, integrals)
+      call set_integrals(basis, integrals)
 
     end if
 
@@ -61,7 +61,7 @@ contains
     hf_energy = (data_in%Z1 * data_in%Z2 / data_in%Rd) + &
         calc_electronic_energy (data_in%n_e, C, P, H, F)
 
-    call hf_write_results(bst, nd, no, m, parity, C, hf_energy, filepath)
+    call hf_write_results(basis, m, parity, C, hf_energy, filepath)
 
   end subroutine hf_procedure
 
@@ -311,62 +311,67 @@ contains
   end function check_std_dev
 
 
-  subroutine set_integrals (basis, nd, no, m, integrals)
+  subroutine set_integrals (basis, integrals)
     type(basis_sturmian_nr) , intent(in)  :: basis
-    integer                 , intent(in)  :: nd
-    integer                 , intent(in)  :: no(:)
-    integer                 , intent(in)  :: m
     real*8                  , intent(out) :: integrals(:, :, :, :)
     logical                 , allocatable :: calculated(:, :, :, :)
     type(sturmian_nr)       , pointer     :: pi, pj, pk, pl
+    integer                               :: mi, mj, mk, ml
     integer                               :: ii, jj, kk, ll
+    integer                               :: n
     logical                               :: lwrite
-    !$ real*8                                :: start, finish
+    !$ real*8                             :: start, finish
 
     !$ interface
     !$  double precision function omp_get_wtime()
     !$  end function omp_get_wtime
     !$ end interface
 
+    n = basis_size(basis)
+
     lwrite = .false.
 
     write (*, '(a)') &
         "commencing two-electron integrals"
     write (*, '(a, i10)') &
-        " unique integrals:  ", (nd ** 4) / 4
+        " unique integrals:  ", (n ** 4) / 4
     write (*, '(a)') &
         " estimated time (s) "
     write (*, '(a, i6)') &
-        "  for 1.0e-7 s/int: ", nint(1.0e-7 * (nd ** 4))
+        "  for 1.0e-7 s/int: ", nint(1.0e-7 * (n ** 4))
     write (*, '(a, i6)') &
-        "  for 1.0e-6 s/int: ", nint(1.0e-6 * (nd ** 4))
+        "  for 1.0e-6 s/int: ", nint(1.0e-6 * (n ** 4))
     write (*, '(a, i6)') &
-        "  for 1.0e-5 s/int: ", nint(1.0e-5 * (nd ** 4))
+        "  for 1.0e-5 s/int: ", nint(1.0e-5 * (n ** 4))
     write (*, '(a, i6)') &
-        "  for 1.0e-4 s/int: ", nint(1.0e-4 * (nd ** 4))
+        "  for 1.0e-4 s/int: ", nint(1.0e-4 * (n ** 4))
 
     !$ start = omp_get_wtime()
 
-    allocate(calculated(1:nd, 1:nd, 1:nd, 1:nd))
+    allocate(calculated(1:n, 1:n, 1:n, 1:n))
 
     calculated = .false.
 
-    !$omp parallel do private(ii, jj, kk, ll, pi, pj, pk, pl) shared(basis, no, integrals, calculated)
-    do ii = 1, nd
+    !$omp parallel do private(ii, jj, kk, ll, pi, pj, pk, pl) shared(basis, integrals, calculated)
+    do ii = 1, n
 
-      pi => basis%b(no(ii))
+      pi => basis%b(ii)
+      mi = get_ang_mom_proj(pi)
 
-      do jj = 1, nd
+      do jj = 1, n
 
-        pj => basis%b(no(jj))
+        pj => basis%b(jj)
+        mj = get_ang_mom_proj(pj)
 
-        do kk = 1, nd
+        do kk = 1, n
 
-          pk => basis%b(no(kk))
+          pk => basis%b(kk)
+          mk = get_ang_mom_proj(pk)
 
-          do ll = 1, nd
+          do ll = 1, n
 
-            pl => basis%b(no(ll))
+            pl => basis%b(ll)
+            ml = get_ang_mom_proj(pl)
 
             if (.not. calculated(ii, jj, kk, ll)) then
 
@@ -375,7 +380,9 @@ contains
               calculated(ii, ll, kk, jj) = .true.
               calculated(kk, ll, ii, jj) = .true.
 
-              call V12me(pi, pj, pk, pl, m, m, m, m, integrals(ii, jj, kk, ll))
+              call V12me(pi, pj, pk, pl, mi, mj, mk, ml, &
+                  integrals(ii, jj, kk, ll))
+
               integrals(kk, jj, ii, ll) = integrals(ii, jj, kk, ll)
               integrals(ii, ll, kk, jj) = integrals(ii, jj, kk, ll)
               integrals(kk, ll, ii, jj) = integrals(ii, jj, kk, ll)
@@ -396,7 +403,7 @@ contains
     !$ write (*, '(a, f10.3)') &
     !$     " time taken:        ", finish - start
     !$ write (*, '(a, es10.3)') &
-    !$     " time per integral: ", (finish - start) / (nd ** 4)
+    !$     " time per integral: ", (finish - start) / (n ** 4)
     write (*, *)
 
   end subroutine set_integrals
@@ -564,17 +571,15 @@ contains
 
 !> writes hartree_fock results to file
 !>  temp(n, l, :) is the plot of the n-th spatial orbital's l-th partial wave.
-  subroutine hf_write_results (bst, nd, no, m, parity, C, hf_energy, filepath)
-    type(basis_sturmian_nr) , intent(in)  :: bst
-    integer                 , intent(in)  :: nd
-    integer                 , intent(in)  :: no(:)
+  subroutine hf_write_results (basis, m, parity, C, hf_energy, filepath)
+    type(basis_sturmian_nr) , intent(in)  :: basis
     integer                 , intent(in)  :: m
     integer                 , intent(in)  :: parity
     real*8                  , intent(in)  :: C(:, :)
     real*8                  , intent(in)  :: hf_energy
     character(len = *)      , intent(in)  :: filepath
     real*8                  , allocatable :: temp(:, :, :)
-    integer                               :: n, l, ii
+    integer                               :: s, l, ii
     integer                               :: unitno
 
     allocate(temp(1:((data_in%n_e + 1) / 2), 0:data_in%latop , 1:grid%nr))
@@ -582,16 +587,16 @@ contains
     !< plot partial wave expansions of spatial orbitals
     temp(:, :, :) = 0.0
 
-    do n = 1, (data_in%n_e + 1) / 2
+    do s = 1, (data_in%n_e + 1) / 2
 
       do l = 0, data_in%latop
 
-        do ii = 1, nd
+        do ii = 1, basis_size(basis)
 
-          if (get_ang_mom(bst%b(no(ii))) == l) then
+          if (get_ang_mom(basis%b(ii)) == l) then
 
-            temp(n, l, :) = temp(n, l, :) + &
-                (C(ii, n) * fpointer_nr(bst%b(no(ii))))
+            temp(s, l, :) = temp(s, l, :) + &
+                (C(ii, s) * fpointer_nr(basis%b(ii)))
 
           end if
 
@@ -623,11 +628,11 @@ contains
     write(unitno, *) grid%nr
     write(unitno, *) grid%gridr(:)
 
-    do n = 1, (data_in%n_e + 1) / 2
+    do s = 1, (data_in%n_e + 1) / 2
 
       do l = data_in%labot, data_in%latop
 
-        write (unitno, *) temp(n, l, :)
+        write (unitno, *) temp(s, l, :)
 
       end do
 

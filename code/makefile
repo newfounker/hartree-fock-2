@@ -35,6 +35,7 @@ OBJ = rsg.o \
 		 form.o hartree_fock.o \
 		 intp.o core_wavefunctions.o \
 		 ovlpste1me_module.o one_electron_func_module.o one_electron_func.o \
+		 structure.o \
 		 main.o
 
 # -- make commands

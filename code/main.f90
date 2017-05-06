@@ -6,6 +6,7 @@ program main
   use sturmian_class        ! defines one-electron functions (and basis of them) with operations on them
   use vnc_module        !  keeps central potential
   use one_electron_func_mod     ! keeps basis of one-electron functions
+  use structure
 
   implicit none
 !
@@ -45,23 +46,26 @@ program main
 !
 !??  print*
 
-!??  print*, 'Start structure calculation'
-  ! Determine number of one-electron target states
-  Number_one_electron_func = 0
+  call hf_structure ()
 
-  do ipar= -1, 1, 2
-    Number_one_electron_func = Number_one_electron_func + &
-        SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
+!< tom ross: removed for hf_calculation
+! !??  print*, 'Start structure calculation'
+!   ! Determine number of one-electron target states
+!   Number_one_electron_func = 0
 
-!!$ account for degeneracy of the states with nonzwero M
-    Number_one_electron_func = Number_one_electron_func + &
-        SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
-  end do
+!   do ipar= -1, 1, 2
+!     Number_one_electron_func = Number_one_electron_func + &
+!         SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
+
+! !!$ account for degeneracy of the states with nonzwero M
+!     Number_one_electron_func = Number_one_electron_func + &
+!         SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
+!   end do
 
 
-  call construct_1el_basis_nr(Number_one_electron_func, trim(output_dir))
+!   call construct_1el_basis_nr(Number_one_electron_func, trim(output_dir))
 
-!------------------------------------------
+! !------------------------------------------
 
 
 
