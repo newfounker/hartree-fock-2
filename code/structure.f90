@@ -52,6 +52,7 @@ contains
   subroutine construct_diagonalised (basis)
     type(basis_sturmian_nr) , intent(out) :: basis
     type(basis_sturmian_nr)               :: basis_l
+    type(sturmian_nr)       , pointer     :: p
     real*8                  , allocatable :: potential(:)
     integer                               :: l, ii, n
 
@@ -73,6 +74,10 @@ contains
         call copy(basis%b(n), basis_l%b(ii))
 
         basis%ortint(n, n) = 1.0
+
+        p => basis%b(n)
+
+        write (*, *) n, get_k(p), get_ang_mom(p), get_ang_mom_proj(p)
 
         n = n + 1
 

@@ -196,7 +196,10 @@ subroutine construct_1el_basis_nr(Number_one_electron_func, hf_file, curve_file)
 
       !< write energies to file
       open (99, file = curve_file, action = "write", position = "append")
-      write (99, *) data_in%Rd, w(:)
+      write (99, "(f15.8)", advance = "no") data_in%Rd
+      do ni = 1, nd
+        write (99, "(f15.8)", advance = "no") w(ni)
+      end do
       close (99)
 
       !??          matz=2

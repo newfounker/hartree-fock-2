@@ -5,7 +5,7 @@
 
   @png
 
-  set output "potential_curve.png"
+  set output "curve.png"
 
   curve = "curve.dat"
 
@@ -37,4 +37,4 @@
 # plots
 
   set title "HF Energy of Diatomic Helium (++) against Radial Separation"
-  plot for [i = 2:n] curve u 1:i ls i lw 2 t sprintf("l = %i", 2*(i-2))
+  plot for [i = 2:n] curve u 1:i ls i lw 2 t sprintf("%i", i - 1)

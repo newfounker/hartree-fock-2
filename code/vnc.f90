@@ -56,27 +56,43 @@ subroutine VLambdaR(maxr,gridr, lambda_max, Z1, Z2, Rd, origin, vlr,minvnc,maxvn
 
   write (*, "(a)") "> nuclear potential"
 
-  if ((abs(Z1 - Z2) < 1.0e-5) .and. (2* origin - 1.0 < 1.0e-5)) then
+  if (Rd .eq. 0) then
+
+    write (*, *) 'atom'
+
+    Za = Z1 + Z2
+
+    temp(:) = 0.0
+
+    do i = 1, maxr
+
+      r = gridr(i)
+
+      temp(i) = -Za / r
+
+    end do
+
+    call minmaxi(temp, maxr, i1, i2)
+
+    vlr(i1:i2, 0) = temp(i1:i2)
+
+    minvnc(0) = i1
+    maxvnc(0) = i2
+
+    lamtop_vc_set = 0
+
+  else if ((abs(Z1 - Z2) < 1.0e-5) .and. (2* origin - 1.0 < 1.0e-5)) then
 
     write (*, *) 'symmetric diatomic molecule'
-    write (*, *)
 
     Rdh = Rd / 2d0  !  distance from COM to a nuclear
 
-    if(Rd .eq. 0d0) then ! joint nuclear, spherically symmetric case, only lam=0 term
+    do i = 1, maxr
+      r = gridr(i)
+      if(r .gt. Rdh) exit
+    enddo
 
-      iRd = 1
-      lambda_max_local = 0
-
-    else
-      do i = 1, maxr
-        r = gridr(i)
-        if(r .gt. Rdh) exit
-      enddo
-
-      iRd = i
-
-    endif
+    iRd = i
 
     Za = Z1 + Z2
 
@@ -104,17 +120,7 @@ subroutine VLambdaR(maxr,gridr, lambda_max, Z1, Z2, Rd, origin, vlr,minvnc,maxvn
 
   else
 
-    if ((abs(Z1) < 1.0e-5) .or. (abs(Z2) < 1.0e-5)) then
-
-      write (*, *) 'atom'
-      write (*, *)
-
-    else
-
-      write (*, *) 'asymmetric diatomic molecule'
-      write (*, *)
-
-    end if
+    write (*, *) 'asymmetric diatomic molecule'
 
     R1 = Rd * origin
     R2 = Rd * (1 - origin)
@@ -143,6 +149,7 @@ subroutine VLambdaR(maxr,gridr, lambda_max, Z1, Z2, Rd, origin, vlr,minvnc,maxvn
 
   end if
 
+  write (*, *)
 
 end subroutine VLambdaR
 
