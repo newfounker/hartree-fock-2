@@ -54,38 +54,58 @@ contains
     type(basis_sturmian_nr)               :: basis_l
     type(sturmian_nr)       , pointer     :: p
     real*8                  , allocatable :: potential(:)
-    integer                               :: l, ii, n
+    integer                               :: size, n, l, k, m
+
+    write (*, "(a)") "> establishing basis"
+
+    !< allocate entire basis (indexing over all k, l, m values)
+    size = 0
+    do l = data_in%labot, data_in%latop
+      size = size + (data_in%nps(l) * ((2 * l) + 1))
+    end do
+
+    call new_basis_nr(basis, size)
 
     !< zero-potential, used in basis diagonalisation
     allocate(potential(1:grid%nr))
     potential = 0.0
 
-    call new_basis_nr(basis, sum(data_in%nps(data_in%labot:data_in%latop)))
-
+    !< entire basis index
     n = 1
 
+    !< loop through basis for given l value
+    write (*, "(4a4)") "n", "k", "l", "m"
     do l = data_in%labot, data_in%latop
 
+      !< construct diagonal basis (w.r.t kinetic energy) with m = 0, for given
+      !< l.
       call construct_wflocalpot_nr(basis_l, data_in%nps(l), potential, &
           data_in%nps(l), l, data_in%alpha(l))
 
-      do ii = 1, data_in%nps(l)
+      do k = 1, data_in%nps(l)
 
-        call copy(basis%b(n), basis_l%b(ii))
+        do m = -l, l, 1
 
-        basis%ortint(n, n) = 1.0
+          call copy(basis%b(n), basis_l%b(k))
 
-        p => basis%b(n)
+          call set_ang_mom_proj(basis%b(n), m)
 
-        write (*, *) n, get_k(p), get_ang_mom(p), get_ang_mom_proj(p)
+          basis%ortint(n, n) = 1.0
 
-        n = n + 1
+          p => basis%b(n)
+          write (*, "(4i4)") n, get_k(p), get_ang_mom(p), get_ang_mom_proj(p)
+
+          n = n + 1
+
+        end do
 
       end do
 
       call destruct(basis_l)
 
     end do
+
+    write (*, *)
 
   end subroutine construct_diagonalised
 
