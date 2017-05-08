@@ -1,6 +1,6 @@
-H                                                                            ! target
-1.0, 0.0, 0.0                                                                  ! Z1, Z2, Zasym,
-0.1, 0.5                                                                       ! Rd, origin
+Ne                                                                            ! target
+10.0, 0.0, 0.0                                                                  ! Z1, Z2, Zasym,
+0.0, 0.5                                                                       ! Rd, origin
 0, 1                                                                           ! labot, latop
 15,1.5 , 15,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 ! nps(:), alpha(:)
 50.0, 20.0, 8, 32, 6, 20                                                      ! rmax, qmax, ndouble, npdbl, npwave, ltmax
@@ -8,4 +8,4 @@ H                                                                            ! t
 0, 0                                                                           ! Mt_min, Mt_max
 1, 0                                                                           ! nst(:, +1)
 0, 0                                                                           ! nst(:, -1)
-4, 100, 1.0e-10                                                               ! n_e, max_iter, tolerance
+10, 100, 1.0e-10                                                               ! n_e, max_iter, tolerance

@@ -147,6 +147,10 @@ contains
 
       write (*, *) ' failed to converge'
 
+      write (*, *) '> stopping'
+
+      stop
+
     end if
 
     write (*, *)
