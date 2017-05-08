@@ -49,7 +49,7 @@ program main
 
   call construct_vnc(grid%nr, grid%gridr)
 
-  call hf_structure (0, trim(hf_file))
+  call hf_structure (trim(hf_file))
 
   ! Determine number of one-electron target states
   Number_one_electron_func = 0

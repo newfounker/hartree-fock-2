@@ -13,10 +13,9 @@ contains
 
 !> Performs Hartree-Fock procedure assuming that the basis has already been
 !> diagonalised, and that the hamiltonian contains
-  subroutine hf_procedure (basis, H, m, filepath)
+  subroutine hf_procedure (basis, H, filepath)
     type(basis_sturmian_nr) , intent(in)    :: basis
     real*8                  , intent(in)    :: H(:, :)
-    integer                 , intent(in)    :: m
     character(len = *)      , intent(in)    :: filepath
     real*8                  , allocatable   :: integrals(:, :, :, :)
     real*8                  , allocatable   :: C(:, :)
@@ -70,7 +69,7 @@ contains
     hf_energy = (data_in%Z1 * data_in%Z2 / data_in%Rd) + &
         calc_electronic_energy (data_in%n_e, C, P, H, F)
 
-    call hf_write_results(basis, C, hf_energy, m, filepath)
+    call hf_write_results(basis, C, hf_energy, filepath)
 
   end subroutine hf_procedure
 
@@ -368,7 +367,7 @@ contains
     calculated = .false.
 
     !$omp parallel do &
-    !$omp& private(ii, jj, kk, ll, pi, pj, pk, pl)
+    !$omp& private(ii, jj, kk, ll, pi, pj, pk, pl) &
     !$omp& shared(basis, integrals, calculated)
     do ii = 1, n
 
@@ -588,11 +587,10 @@ contains
 
 !> writes hartree_fock results to file
 !>  temp(n, l, :) is the plot of the n-th spatial orbital's l-th partial wave.
-  subroutine hf_write_results (basis, C, hf_energy, m, filepath)
+  subroutine hf_write_results (basis, C, hf_energy, filepath)
     type(basis_sturmian_nr) , intent(in)  :: basis
     real*8                  , intent(in)  :: C(:, :)
     real*8                  , intent(in)  :: hf_energy
-    integer                 , intent(in)  :: m
     character(len = *)      , intent(in)  :: filepath
     real*8                  , allocatable :: temp(:, :, :)
     integer                               :: s, l, ii
@@ -633,7 +631,6 @@ contains
     unitno = 1000
     open (unitno, file = filepath)
 
-    write(unitno, *) m
     write(unitno, *) data_in%n_e
     write(unitno, *) data_in%labot, data_in%latop
     write(unitno, *) hf_energy

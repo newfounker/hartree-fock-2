@@ -16,8 +16,7 @@ contains
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !> variable data_in.
 !> Writes the results of the HF procedure to the specified output file
-  subroutine hf_structure (m, hf_file)
-    integer                 , intent(in)  :: m
+  subroutine hf_structure (hf_file)
     character(len = *)      , intent(in)  :: hf_file
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
@@ -34,7 +33,7 @@ contains
     call nuclear_hamiltonian(basis, H)
 
     !< perform hartree_fock procedure (assuming m = 0)
-    call hf_procedure(basis, H, m, hf_file)
+    call hf_procedure(basis, H, hf_file)
 
     !< core wavefunctions
     ! call core%read_from("../output/hf_results.dat")
