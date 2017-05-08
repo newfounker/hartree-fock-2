@@ -51,20 +51,20 @@ program main
 
   call hf_structure (trim(hf_file))
 
-  ! Determine number of one-electron target states
-  Number_one_electron_func = 0
+!   ! Determine number of one-electron target states
+!   Number_one_electron_func = 0
 
-  do ipar= -1, 1, 2
-    Number_one_electron_func = Number_one_electron_func + &
-        SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
+!   do ipar= -1, 1, 2
+!     Number_one_electron_func = Number_one_electron_func + &
+!         SUM(data_in%nst(data_in%Mt_min:data_in%Mt_max, ipar))
 
-!!$ account for degeneracy of the states with nonzwero M
-    Number_one_electron_func = Number_one_electron_func + &
-        SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
-  end do
+! !!$ account for degeneracy of the states with nonzwero M
+!     Number_one_electron_func = Number_one_electron_func + &
+!         SUM(data_in%nst(max(1,data_in%Mt_min):data_in%Mt_max, ipar))
+!   end do
 
-  call construct_1el_basis_nr(Number_one_electron_func, &
-      trim(hf_file), trim(curve_file))
+!   call construct_1el_basis_nr(Number_one_electron_func, &
+!       trim(hf_file), trim(curve_file))
 
   stop
 

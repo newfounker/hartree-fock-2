@@ -592,27 +592,38 @@ contains
     real*8                  , intent(in)  :: C(:, :)
     real*8                  , intent(in)  :: hf_energy
     character(len = *)      , intent(in)  :: filepath
-    real*8                  , allocatable :: temp(:, :, :)
-    integer                               :: s, l, ii
+    real*8                  , allocatable :: temp(:, :, :, :)
+    integer                               :: s, l, m, ii
     integer                               :: unitno
 
-    allocate(temp(1:((data_in%n_e + 1) / 2), 0:data_in%latop , 1:grid%nr))
+    ! allocate(temp(1:((data_in%n_e + 1) / 2), 0:data_in%latop, &
+    !     -data_in%latop:data_in%latop, 1:grid%nr))
+    allocate(temp(1:grid%nr, -data_in%latop:data_in%latop, 0:data_in%latop, &
+        1:((data_in%n_e + 1)/2)))
 
     !< plot partial wave expansions of spatial orbitals
-    temp(:, :, :) = 0.0
+    temp(:, :, :, :) = 0.0
 
     do s = 1, (data_in%n_e + 1) / 2
 
       do l = 0, data_in%latop
 
-        do ii = 1, basis_size(basis)
+        do m = -l, l
 
-          if (get_ang_mom(basis%b(ii)) == l) then
+          do ii = 1, basis_size(basis)
 
-            temp(s, l, :) = temp(s, l, :) + &
-                (C(ii, s) * fpointer_nr(basis%b(ii)))
+            if ((get_ang_mom(basis%b(ii)) == l) &
+                .and. (get_ang_mom_proj(basis%b(ii)) == m)) then
 
-          end if
+              temp(:, m, l, s) = temp(:, m, l, s) + &
+                  (C(ii, s) * fpointer_nr(basis%b(ii)))
+
+              ! temp(s, l, m, :) = temp(s, l, m, :) + &
+              !     (C(ii, s) * fpointer_nr(basis%b(ii)))
+
+            end if
+
+          end do
 
         end do
 
@@ -640,11 +651,22 @@ contains
 
     do s = 1, (data_in%n_e + 1) / 2
 
+      write (*, "(a, i3)") ">> spatial orbtial:", s
+
       do l = data_in%labot, data_in%latop
 
-        write (unitno, *) temp(s, l, :)
+        do m = -l, l
+
+          write (unitno, *) temp(:, m, l, s)
+
+          write (*, "(2i3, f8.5)") &
+              l, m, sum((temp(:, m, l, s) ** 2) * grid%weight(:))
+
+        end do
 
       end do
+
+      write (*, *)
 
     end do
 
