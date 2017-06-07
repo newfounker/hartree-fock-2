@@ -20,6 +20,7 @@ contains
     character(len = *)      , intent(in)  :: hf_file
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
+    real*8                  , allocatable :: integrals(:, :, :, :)
     integer                               :: n, ii
     type(core_state)                      :: core
 
@@ -28,18 +29,32 @@ contains
 
     n = basis_size(basis)
 
-    !< construct nuclear hamiltonian matrix
-    allocate(H(1:n, 1:n))
-    call nuclear_hamiltonian(basis, H)
+    !< construct two-electron integrals
+    allocate(integrals(1:n, 1:n, 1:n, 1:n))
+    call two_electron_integrals(basis, integrals)
 
-    !< perform hartree_fock procedure (assuming m = 0)
-    call hf_procedure(basis, H, hf_file)
+    !< allocate nuclear hamiltonian
+    allocate(H(1:n, 1:n))
+
+    !< loop over nuclear radial distance values
+    do ii = 0, 0
+
+      !< construct nuclear potential
+      call nuclear_potential(data_in%Rd + ii)
+
+      !< construct nuclear hamiltonian matrix
+      call nuclear_hamiltonian(basis, H)
+
+      !< perform hartree_fock procedure (assuming m = 0)
+      call hf_procedure(basis, H, integrals, hf_file)
+
+    end do
 
     !< core wavefunctions
-    ! call core%read_from("../output/hf_results.dat")
-    ! call core%write_pw_to("../output/core_plots.dat")
-    ! call core%write_coulomb_pw_to("../output/core_coulomb.dat")
-    ! call core%write_potential_pw_to("../output/core_potential.dat")
+    call core%read_from("../output/hf_results.dat")
+    call core%write_pw_to("../output/core_plots.dat")
+    call core%write_coulomb_pw_to("../output/core_coulomb.dat")
+    call core%write_potential_pw_to("../output/core_potential.dat")
     ! call core_spectrum(core, basis, n, no, H, S)
 
   end subroutine hf_structure
@@ -50,7 +65,7 @@ contains
 !> T(ii, ii) = get_energy(bst%b(ii))
   subroutine construct_diagonalised (basis)
     type(basis_sturmian_nr) , intent(out) :: basis
-    type(basis_sturmian_nr)               :: basis_l
+    type(basis_sturmian_nr) , pointer     :: basis_sets(:)
     type(sturmian_nr)       , pointer     :: p
     real*8                  , allocatable :: potential(:)
     integer                               :: size, n, l, k, m
@@ -58,9 +73,13 @@ contains
     write (*, "(a)") "> establishing basis"
 
     !< allocate entire basis (indexing over all k, l, m values)
+    !< modified for only m = 0 basis functions
     size = 0
     do l = data_in%labot, data_in%latop
-      size = size + (data_in%nps(l) * ((2 * l) + 1))
+
+      ! size = size + (data_in%nps(l) * ((2 * l) + 1))
+      size = size + data_in%nps(l)
+
     end do
 
     call new_basis_nr(basis, size)
@@ -73,19 +92,27 @@ contains
     n = 1
 
     !< loop through basis for given l value
-    write (*, "(4a4)") "n", "k", "l", "m"
+    allocate (basis_sets(data_in%labot:data_in%latop))
     do l = data_in%labot, data_in%latop
 
-      !< construct diagonal basis (w.r.t kinetic energy) with m = 0, for given
-      !< l.
-      call construct_wflocalpot_nr(basis_l, data_in%nps(l), potential, &
+      !< construct diagonal basis (w.r.t kinetic energy) with m = 0, for given l
+      call construct_wflocalpot_nr(basis_sets(l), data_in%nps(l), potential, &
           data_in%nps(l), l, data_in%alpha(l))
 
-      do k = 1, data_in%nps(l)
+    end do
 
-        do m = -l, l, 1
+    !< loop through basis for given l value
+    write (*, "(4a4)") "n", "k", "l", "m"
 
-          call copy(basis%b(n), basis_l%b(k))
+    !< use only m = 0 values
+    ! do m = -data_in%latop, data_in%latop, 1
+    do m = 0, 0, 1
+
+      do l = abs(m), data_in%latop
+
+        do k = 1, data_in%nps(l)
+
+          call copy(basis%b(n), basis_sets(l)%b(k))
 
           call set_ang_mom_proj(basis%b(n), m)
 
@@ -100,13 +127,31 @@ contains
 
       end do
 
-      call destruct(basis_l)
+    end do
+
+
+    !< destruct temporary basis sets
+    do l = data_in%labot, data_in%latop
+
+      call destruct(basis_sets(l))
 
     end do
 
     write (*, *)
 
   end subroutine construct_diagonalised
+
+!> Construct nuclear potential
+  subroutine nuclear_potential (rd)
+    real*8  , intent(in) :: rd
+    integer              :: lamtop_vc_set
+
+    vnc(:, :) = 0.0
+
+    call VLambdaR(grid%nr, grid%gridr, data_in%ltmax, data_in%Z1, data_in%Z2, &
+        rd, data_in%origin, vnc, minvnc, maxvnc, lamtop_vc_set)
+
+  end subroutine nuclear_potential
 
 !> Constructs the hamiltonian (kinetic + nuclear potential) for a given basis,
 !> assuming that is has already been diagonalised with regard to the kinetic
@@ -158,5 +203,105 @@ contains
     end do
 
   end subroutine nuclear_hamiltonian
+
+!> Calculates two-electron integrals for a given basis of functions.
+  subroutine two_electron_integrals (basis, integrals)
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    real*8                  , intent(out) :: integrals(:, :, :, :)
+    logical                 , allocatable :: calculated(:, :, :, :)
+    type(sturmian_nr)       , pointer     :: pi, pj, pk, pl
+    integer                               :: mi, mj, mk, ml
+    integer                               :: ii, jj, kk, ll
+    integer                               :: n
+    !$ real*8                             :: start, finish
+
+    !$ interface
+    !$  double precision function omp_get_wtime()
+    !$  end function omp_get_wtime
+    !$ end interface
+
+    n = basis_size(basis)
+
+    write (*, "(a)") ">> two-electron integrals"
+    write (*, '(a, es10.3)') &
+        " basis size:        ", 1.0 * n
+    write (*, '(a, es10.3)') &
+        " integrals:         ", (n ** 4) / 1.0
+    write (*, '(a, es10.3)') &
+        " unique integrals:  ", (n ** 4) / 4.0
+    write (*, '(a)') &
+        " estimated time (s) "
+    write (*, '(a, i6)') &
+        "  for 1.0e-7 s/int: ", nint(1.0e-7 * (n ** 4))
+    write (*, '(a, i6)') &
+        "  for 1.0e-6 s/int: ", nint(1.0e-6 * (n ** 4))
+    write (*, '(a, i6)') &
+        "  for 1.0e-5 s/int: ", nint(1.0e-5 * (n ** 4))
+    write (*, '(a, i6)') &
+        "  for 1.0e-4 s/int: ", nint(1.0e-4 * (n ** 4))
+
+    !$ start = omp_get_wtime()
+
+    allocate(calculated(1:n, 1:n, 1:n, 1:n))
+
+    calculated = .false.
+
+    !$omp parallel do &
+    !$omp& private(ii, jj, kk, ll, pi, pj, pk, pl) &
+    !$omp& shared(basis, integrals, calculated)
+    do ii = 1, n
+
+      pi => basis%b(ii)
+      mi = get_ang_mom_proj(pi)
+
+      do jj = 1, n
+
+        pj => basis%b(jj)
+        mj = get_ang_mom_proj(pj)
+
+        do kk = 1, n
+
+          pk => basis%b(kk)
+          mk = get_ang_mom_proj(pk)
+
+          do ll = 1, n
+
+            pl => basis%b(ll)
+            ml = get_ang_mom_proj(pl)
+
+            if (.not. calculated(ii, jj, kk, ll)) then
+
+              calculated(ii, jj, kk, ll) = .true.
+              calculated(kk, jj, ii, ll) = .true.
+              calculated(ii, ll, kk, jj) = .true.
+              calculated(kk, ll, ii, jj) = .true.
+
+              call V12me(pi, pj, pk, pl, mi, mj, mk, ml, &
+                  integrals(ii, jj, kk, ll))
+
+              integrals(kk, jj, ii, ll) = integrals(ii, jj, kk, ll)
+              integrals(ii, ll, kk, jj) = integrals(ii, jj, kk, ll)
+              integrals(kk, ll, ii, jj) = integrals(ii, jj, kk, ll)
+
+            end if
+
+          end do
+
+        end do
+
+      end do
+
+    end do
+    !$omp end parallel do
+
+    !$ finish = omp_get_wtime()
+
+    !$ write (*, '(a, f10.3)') &
+    !$     " time taken:        ", finish - start
+    !$ write (*, '(a, es10.3)') &
+    !$     " time per integral: ", (finish - start) / (n ** 4)
+    write (*, *)
+
+  end subroutine two_electron_integrals
 
 end module structure

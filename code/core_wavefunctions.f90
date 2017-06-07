@@ -563,7 +563,11 @@ contains
 
         spectroscopic(l, s) = sum(pw(:, l, s) * pw(:, l, s) * grid%weight(:))
 
-        write (*, '(i4, f10.3)') l, spectroscopic(l, s)
+          if (abs(spectroscopic(l, s)) > 1.0e-5) then
+
+            write (*, '(i4, f10.3)') l, spectroscopic(l, s)
+
+          end if
 
       end do
 

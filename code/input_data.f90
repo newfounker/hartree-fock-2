@@ -35,6 +35,7 @@ module input_data
     integer          :: n_e              ! number of electrons in molecule
     integer          :: iter_max         ! maximum number of hf iterations
     real*8           :: tolerance        ! convergence tolerance of density matrix
+    integer, pointer :: symmetry(:)      ! orbital symmetry (m of orbital)
 
   end type input
 
@@ -170,13 +171,17 @@ contains
       write (*, *)
     end if
 
-    ! reading n_e, iter_max, tolerance
+    ! reading n_e, iter_max, tolerance, symmetry
     read (unitno, *) self%n_e, self%iter_max, self%tolerance
+
+    allocate(self%symmetry(1:((self%n_e + 1) / 2)))
+    read (unitno, *) self%symmetry(:)
 
     if (lwrite) then
       write (*, '(a, i4)')     ' n_e:         ', self%n_e
       write (*, '(a, i4)')     ' iter_max:    ', self%iter_max
       write (*, '(a, es10.3)') ' tolerance:   ', self%tolerance
+      write (*, '(a, 20i4)')   ' symmetry:    ', self%symmetry
       write (*, *)
     end if
 
