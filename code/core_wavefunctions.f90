@@ -38,6 +38,8 @@ module core_wavefunctions
 
   contains
 
+    procedure , pass :: get_frozen_energy
+
     procedure , pass :: get_pw_functions
     procedure , pass :: get_coulomb_pw
     procedure , pass :: get_potential_pw
@@ -110,6 +112,16 @@ contains
   end subroutine core_spectrum
 
 !> .............................................................................
+
+!> get_frozen_energy
+!>   energy associated with frozen core
+  function get_frozen_energy (core) result (energy)
+    class(core_state) , intent(in) :: core
+    real*8                         :: energy
+
+    energy = core%energy
+
+  end function get_frozen_energy
 
 !> get_pw_functions
   subroutine get_pw_functions (core, pw)

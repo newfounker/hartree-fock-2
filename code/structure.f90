@@ -21,8 +21,10 @@ contains
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
+    real*8                  , allocatable :: curve(:), curve_grid(:)
+    integer                               :: curve_n
     integer                               :: n, ii
-    type(core_state)                      :: core
+    type(core_state)        , pointer     :: core
 
     !< construct basis
     call construct_diagonalised(basis)
@@ -36,11 +38,19 @@ contains
     !< allocate nuclear hamiltonian
     allocate(H(1:n, 1:n))
 
-    !< loop over nuclear radial distance values
-    do ii = 0, 0
+    !< loop over nuclear radial distance values to construct potential energy
+    !< curve.
+    curve_n = 20
+
+    allocate(curve_grid(1:curve_n))
+    allocate(curve(1:curve_n))
+
+    do ii = 1, curve_n
+
+      curve_grid(ii) = exp((2.0 * ii) / curve_n) - 1.0
 
       !< construct nuclear potential
-      call nuclear_potential(data_in%Rd + ii)
+      call nuclear_potential(curve_grid(ii))
 
       !< construct nuclear hamiltonian matrix
       call nuclear_hamiltonian(basis, H)
@@ -48,13 +58,28 @@ contains
       !< perform hartree_fock procedure (assuming m = 0)
       call hf_procedure(basis, H, integrals, hf_file)
 
+      !< read in energy
+      allocate(core)
+      call core%read_from("../output/hf_results.dat")
+      curve(ii) = core%get_frozen_energy() + (data_in%Z1 * data_in%Z2 / curve_grid(ii))
+      deallocate(core)
+
     end do
 
+    !< write potential curve to file
+    open(1000, file = "../output/curve.dat")
+    do ii = 1, curve_n
+
+      write (1000, *) curve_grid(ii), curve(ii)
+
+    end do
+    close(1000)
+
     !< core wavefunctions
-    call core%read_from("../output/hf_results.dat")
-    call core%write_pw_to("../output/core_plots.dat")
-    call core%write_coulomb_pw_to("../output/core_coulomb.dat")
-    call core%write_potential_pw_to("../output/core_potential.dat")
+    ! call core%read_from("../output/hf_results.dat")
+    ! call core%write_pw_to("../output/core_plots.dat")
+    ! call core%write_coulomb_pw_to("../output/core_coulomb.dat")
+    ! call core%write_potential_pw_to("../output/core_potential.dat")
     ! call core_spectrum(core, basis, n, no, H, S)
 
   end subroutine hf_structure
@@ -222,7 +247,7 @@ contains
 
     n = basis_size(basis)
 
-    write (*, "(a)") ">> two-electron integrals"
+    write (*, "(a)") "> two-electron integrals"
     write (*, '(a, es10.3)') &
         " basis size:        ", 1.0 * n
     write (*, '(a, es10.3)') &
