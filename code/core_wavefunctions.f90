@@ -320,31 +320,32 @@ contains
 !>  sa_i(:) are the indexes of the symmetry-adapted basis functions (w.r.t. the
 !>    larger basis)
 !>  sa_n is the number of symmetry-adapted basis functions
-  subroutine spectrum (core, basis, sa_n, sa_i, T, S)
+  subroutine spectrum (core, basis, T, S, C, w)
     class(core_state)       , intent(in)  :: core
     type(basis_sturmian_nr) , intent(in)  :: basis
-    integer                 , intent(in)  :: sa_n
-    integer                 , intent(in)  :: sa_i(:)
     real*8                  , intent(in)  :: T(:, :)
     real*8                  , intent(in)  :: S(:, :)
+    real*8                  , intent(out) :: C(:, :), w(:)
     real*8                  , allocatable :: V(:, :)
-    real*8                  , allocatable :: C(:, :), w(:)
     type(sturmian_nr)       , pointer     :: pi, pj
     integer                               :: ierr
-    integer                               :: ii, jj
+    integer                               :: basis_n, ii, jj
 
     write (*, *) "diagonalising with nuclear, coulomb and exchange potentials"
 
+    !< basis size
+    basis_n = basis_size(basis)
+
     !< (coulomb + exchange) potential matrix
-    allocate(V(1:sa_n, 1:sa_n))
+    allocate(V(1:basis_n, 1:basis_n))
     V(:, :) = 0d0
 
-    do ii = 1, sa_n
+    do ii = 1, basis_n
 
-      do jj = 1, sa_n
+      do jj = 1, basis_n
 
-        pi => basis%b(sa_i(ii))
-        pj => basis%b(sa_i(jj))
+        pi => basis%b(ii)
+        pj => basis%b(jj)
 
         V(ii, jj) = core%potential_me(pi, pj)
 
@@ -352,18 +353,14 @@ contains
 
     end do
 
-    !< diagonalise
-    allocate(C(1:sa_n, 1:sa_n))
-    allocate(w(1:sa_n))
-
-    call rsg(sa_n, sa_n, T + V, S, w, 2, C, ierr)
+    call rsg(basis_n, basis_n, T + V, S, w, 2, C, ierr)
 
     if (ierr /= 0) then
       write (*, "(a)") "rsg failed to diagonalise the system"
     end if
 
     !< write eigenvalues
-    do ii = 1, sa_n
+    do ii = 1, basis_n
       write (*, '(i4, f10.3)') ii, w(ii)
     end do
 

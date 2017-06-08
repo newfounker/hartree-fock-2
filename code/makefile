@@ -32,8 +32,8 @@ OBJ = rsg.o \
 		 V12me.o \
 		 wigner.o vnc_module.o vnc.o \
 		 state_class.o states_module.o \
-		 form.o hartree_fock.o \
 		 intp.o core_wavefunctions.o \
+		 form.o hartree_fock.o \
 		 ovlpste1me_module.o one_electron_func_module.o one_electron_func.o \
 		 structure.o \
 		 main.o

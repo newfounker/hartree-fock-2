@@ -19,29 +19,31 @@ contains
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !> variable data_in.
   subroutine structure_simple ()
-    type(basis_sturmian_nr)               :: basis
+    type(basis_sturmian_nr)               :: basis, core_basis
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
     type(core_state)                      :: core
-    integer                               :: basis_n, ii
+    integer                               :: core_basis_n, ii
 
     !< construct basis
     call construct_diagonalised(basis)
 
-    basis_n = basis_size(basis)
+    core_basis = sa_projection(basis, 0)
+    core_basis_n = basis_size(core_basis)
 
     !< construct two-electron integrals
-    allocate(integrals(1:basis_n, 1:basis_n, 1:basis_n, 1:basis_n))
-    call two_electron_integrals(basis, integrals)
+    allocate(integrals(1:core_basis_n, 1:core_basis_n, 1:core_basis_n, &
+        1:core_basis_n))
+    call two_electron_integrals(core_basis, integrals)
 
     !< allocate nuclear hamiltonian
-    allocate(H(1:basis_n, 1:basis_n))
+    allocate(H(1:core_basis_n, 1:core_basis_n))
 
     !< construct nuclear hamiltonian matrix
-    call nuclear_hamiltonian(basis, H)
+    call nuclear_hamiltonian(core_basis, H)
 
     !< perform hartree_fock procedure (assuming m = 0)
-    call hf_procedure(basis, H, integrals, core)
+    call hf_procedure(core_basis, H, integrals, core)
 
   end subroutine structure_simple
 
@@ -52,22 +54,25 @@ contains
   subroutine structure_core (core_grid, core_states)
     real*8                  , intent(in)  :: core_grid(:)
     type(core_state)        , intent(out) :: core_states(:)
-    type(basis_sturmian_nr)               :: basis
+    type(basis_sturmian_nr)               :: basis, core_basis
+    integer                               :: core_basis_n
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
-    integer                               :: basis_n, core_n, ii
+    integer                               :: core_n, ii
 
     !< construct basis
     call construct_diagonalised(basis)
 
-    basis_n = basis_size(basis)
+    core_basis = sa_projection(basis, 0)
+    core_basis_n = basis_size(core_basis)
 
     !< construct two-electron integrals
-    allocate(integrals(1:basis_n, 1:basis_n, 1:basis_n, 1:basis_n))
-    call two_electron_integrals(basis, integrals)
+    allocate(integrals(1:core_basis_n, 1:core_basis_n, 1:core_basis_n, &
+        1:core_basis_n))
+    call two_electron_integrals(core_basis, integrals)
 
     !< allocate nuclear hamiltonian
-    allocate(H(1:basis_n, 1:basis_n))
+    allocate(H(1:core_basis_n, 1:core_basis_n))
 
     !< calculate core states for varying radial-separation
     core_n = size(core_grid)
@@ -78,23 +83,111 @@ contains
       call nuclear_potential(core_grid(ii))
 
       !< construct nuclear hamiltonian matrix
-      call nuclear_hamiltonian(basis, H)
+      call nuclear_hamiltonian(core_basis, H)
 
       !< perform hartree_fock procedure (assuming m = 0)
-      call hf_procedure(basis, H, integrals, core_states(ii))
+      call hf_procedure(core_basis, H, integrals, core_states(ii))
 
     end do
 
-    do ii = 1, core_n
+    ! do ii = 1, core_n
 
-      write (*, "(3f10.5)") &
-          core_grid(ii), &
-          core_states(ii)%get_electronic_energy(), &
-          core_states(ii)%get_nuclear_energy()
+    !   write (*, "(3f10.5)") &
+    !       core_grid(ii), &
+    !       core_states(ii)%get_electronic_energy(), &
+    !       core_states(ii)%get_nuclear_energy()
 
-    end do
+    ! end do
+
+    call core_potential_curve(core_states)
 
   end subroutine structure_core
+
+!> Construct potential energy curve for frozen core w/ active electron, for a
+!> number of target symmetries, as specified in data_in.
+  subroutine core_potential_curve (core_states)
+    type(core_state)        , intent(in)  :: core_states(:)
+    type(basis_sturmian_nr)               :: basis, sa_basis
+    integer                               :: core_n, sa_basis_n
+    real*8                  , allocatable :: potential_curve(:, :, :)
+    real*8                  , allocatable :: T(:, :), S(:, :), C(:, :), w(:)
+    integer                               :: m, parity, ii
+
+    !< determined number of radial distances
+    core_n = size(core_states)
+
+    !< construct basis
+    call construct_diagonalised(basis)
+
+    !< construct potential energy curve of active electron w/ frozen core for
+    !< target symmetries specified in data_in
+    allocate(potential_curve(1:core_n, data_in%Mt_min:data_in%Mt_max, -1:1))
+
+    potential_curve(:, :, :) = 0.0
+
+    do m = data_in%Mt_min, data_in%Mt_max
+
+      do parity = -1, 1, 2
+
+        !< construct symmetry adapted basis
+        sa_basis = sa_parity(sa_projection(basis, m), parity)
+        sa_basis_n = basis_size(sa_basis)
+
+        !< construct overlap matrix
+        allocate(S(1:sa_basis_n, 1:sa_basis_n))
+
+        S(:, :) = 0.0
+        do ii = 1, sa_basis_n
+
+          S(ii, ii) = 1.0
+
+        end do
+
+        !< construct kinetic energy matrix
+        allocate(T(1:sa_basis_n, 1:sa_basis_n))
+
+        T(:, :) = 0.0
+        do ii = 1, sa_basis_n
+
+          T(ii, ii) = get_energy(sa_basis%b(ii))
+
+        end do
+
+        !< allocate eigencoefficients and eigenvalues
+        allocate(C(1:sa_basis_n, 1:sa_basis_n))
+        allocate(w(1:sa_basis_n))
+
+        !< determine spectrum of symmetry-adapted active electron at each
+        !< radial-separation
+        do ii = 1, core_n
+
+          call core_states(ii)%spectrum(sa_basis, T, S, C, w)
+
+          potential_curve(ii, m, parity) = &
+              core_states(ii)%get_electronic_energy() + &
+              core_states(ii)%get_nuclear_energy() + &
+              w(1)
+
+        end do
+
+        deallocate(S, T, C, w)
+
+      end do
+
+    end do
+
+    open(unit = 1000, file = "../output/potential_curve.dat")
+    do ii = 1, core_n
+
+      write (1000, *) &
+          core_states(ii)%get_radial_distance(), &
+          potential_curve(ii, :, -1:1:2)
+
+    end do
+    close(unit = 1000)
+
+  end subroutine core_potential_curve
+
 
 !> Constructs a diagonalised basis, specified by the global data_in variable,
 !> which is diagonalised with regard to the kinetic energy operator.
@@ -110,16 +203,16 @@ contains
     write (*, "(a)") "> establishing basis"
 
     !< allocate entire basis (indexing over all k, l, m values)
-    !< modified for only m = 0 basis functions
+    ! !< modified for only m = 0 basis functions
     size = 0
     do l = data_in%labot, data_in%latop
 
-      ! size = size + (data_in%nps(l) * ((2 * l) + 1))
-      size = size + data_in%nps(l)
+      size = size + (data_in%nps(l) * ((2 * l) + 1))
+      ! size = size + data_in%nps(l)
 
     end do
 
-    call new_basis_nr(basis, size)
+    call new_basis(basis, size)
 
     !< zero-potential, used in basis diagonalisation
     allocate(potential(1:grid%nr))
@@ -142,8 +235,8 @@ contains
     write (*, "(4a4)") "n", "k", "l", "m"
 
     !< use only m = 0 values
-    ! do m = -data_in%latop, data_in%latop, 1
-    do m = 0, 0, 1
+    do m = -data_in%latop, data_in%latop, 1
+    ! do m = 0, 0, 1
 
       do l = abs(m), data_in%latop
 
@@ -344,51 +437,126 @@ contains
 
   end subroutine two_electron_integrals
 
-!> Record elements of a basis which satisfy given symmetries of parity and
-!> angular momentum projection.
-  subroutine symmetry_adaption (basis, parity, m, sa_n, sa_i)
+!> Construct a new basis of functions of given parity
+  function sa_parity (basis, parity) result (sa_basis)
     type(basis_sturmian_nr) , intent(in)  :: basis
     integer                 , intent(in)  :: parity
-    integer                 , intent(in)  :: m
-    integer                 , intent(out) :: sa_n
-    integer       , pointer , intent(out) :: sa_i(:)
+    type(basis_sturmian_nr)               :: sa_basis
     type(sturmian_nr)       , pointer     :: p
-    integer                               :: sa_n_temp
-    integer                 , allocatable :: sa_i_temp(:)
-    integer                               :: n, ii
+    integer                               :: sa_n
+    integer                 , allocatable :: sa_i(:)
+    integer                               :: basis_n, ii, jj
+
+    write (*, "(a, i2)") &
+        "> symmetry-adapting basis: parity = ", parity
 
     !< get basis size
-    n = basis_size(basis)
+    basis_n = basis_size(basis)
 
-    !< set up temporary symmetry-adapted indexes
-    allocate(sa_i_temp(1:n))
+    !< set up symmetry-adapted indexes
+    allocate(sa_i(1:basis_n))
 
-    sa_i_temp(:) = 0
-    sa_n_temp = 0
+    sa_i(:) = 0
+    sa_n = 0
 
-    !< record symmetry-adapted basis functions
-    do ii = 1, n
+    !< record indexes of symmetry-adapted basis functions
+    do ii = 1, basis_n
 
       p => basis%b(ii)
 
-      if ((((-1) ** get_ang_mom(p)) == parity) &
-          .and. (get_ang_mom_proj(p) == m)) then
+      if (((-1) ** get_ang_mom(p)) == parity) then
 
-        sa_n_temp = sa_n_temp + 1
+        sa_n = sa_n + 1
 
-        sa_i_temp(sa_n_temp) = ii
+        sa_i(sa_n) = ii
 
       end if
 
     end do
 
-    !< transfer temporary values across
-    sa_n = sa_n_temp
+    !< construct sa_basis from symmetry-adapted indexes
+    call sa_extract(basis, sa_n, sa_i, sa_basis)
 
-    allocate(sa_i(1:sa_n))
+  end function sa_parity
 
-    sa_i(:) = sa_i_temp(:)
+!> Construct a new basis of functions of given angular momentum projection
+  function sa_projection (basis, m) result (sa_basis)
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    integer                 , intent(in)  :: m
+    type(basis_sturmian_nr)               :: sa_basis
+    type(sturmian_nr)       , pointer     :: p
+    integer                               :: sa_n
+    integer                 , allocatable :: sa_i(:)
+    integer                               :: basis_n, ii, jj
 
-  end subroutine symmetry_adaption
+    write (*, "(a, i2)") &
+        "> symmetry-adapting basis: m = ", m
+
+    !< get basis size
+    basis_n = basis_size(basis)
+
+    !< set up symmetry-adapted indexes
+    allocate(sa_i(1:basis_n))
+
+    sa_i(:) = 0
+    sa_n = 0
+
+    !< record indexes of symmetry-adapted basis functions
+    do ii = 1, basis_n
+
+      p => basis%b(ii)
+
+      if (get_ang_mom_proj(p) == m) then
+
+        sa_n = sa_n + 1
+
+        sa_i(sa_n) = ii
+
+      end if
+
+    end do
+
+    !< construct sa_basis from symmetry-adapted indexes
+    call sa_extract(basis, sa_n, sa_i, sa_basis)
+
+  end function sa_projection
+
+!> Extract symmetry-adapted basis functions, given their indexes.
+  subroutine sa_extract (basis, sa_n, sa_i, sa_basis)
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    integer                 , intent(in)  :: sa_n
+    integer                 , intent(in)  :: sa_i(:)
+    type(basis_sturmian_nr) , intent(out) :: sa_basis
+    integer                               :: basis_n, ii, jj
+    type(sturmian_nr)       , pointer     :: p
+
+    write (*, "(a)") &
+        "> extracting symmetry-adapted basis functions"
+
+    !< construct sa_basis from symmetry-adapted indexes
+    call new_basis(sa_basis, sa_n)
+
+    do ii = 1, sa_n
+
+      p => basis%b(sa_i(ii))
+
+      call copy(sa_basis%b(ii), p)
+
+      write (*, "(4i4)") ii, get_k(p), get_ang_mom(p), get_ang_mom_proj(p)
+
+    end do
+
+    !< construct overlap matrix
+    do ii = 1, sa_n
+
+      do jj = 1, sa_n
+
+        sa_basis%ortint(ii, jj) = basis%ortint(sa_i(ii), sa_i(jj))
+
+      end do
+
+    end do
+
+  end subroutine sa_extract
 
 end module structure
