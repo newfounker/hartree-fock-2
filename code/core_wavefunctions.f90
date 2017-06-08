@@ -317,13 +317,11 @@ contains
   end function potential_me
 
 !> diagonalise a basis with frozen core electron potentials
-!>  sa_i(:) are the indexes of the symmetry-adapted basis functions (w.r.t. the
-!>    larger basis)
-!>  sa_n is the number of symmetry-adapted basis functions
-  subroutine spectrum (core, basis, T, S, C, w)
+!>  H(:, :) is assumed to be kinetic + nuclear potential matrix
+  subroutine spectrum (core, basis, H, S, C, w)
     class(core_state)       , intent(in)  :: core
     type(basis_sturmian_nr) , intent(in)  :: basis
-    real*8                  , intent(in)  :: T(:, :)
+    real*8                  , intent(in)  :: H(:, :)
     real*8                  , intent(in)  :: S(:, :)
     real*8                  , intent(out) :: C(:, :), w(:)
     real*8                  , allocatable :: V(:, :)
@@ -353,7 +351,7 @@ contains
 
     end do
 
-    call rsg(basis_n, basis_n, T + V, S, w, 2, C, ierr)
+    call rsg(basis_n, basis_n, H + V, S, w, 2, C, ierr)
 
     if (ierr /= 0) then
       write (*, "(a)") "rsg failed to diagonalise the system"

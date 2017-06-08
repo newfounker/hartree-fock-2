@@ -110,7 +110,7 @@ contains
     type(basis_sturmian_nr)               :: basis, sa_basis
     integer                               :: core_n, sa_basis_n
     real*8                  , allocatable :: potential_curve(:, :, :)
-    real*8                  , allocatable :: T(:, :), S(:, :), C(:, :), w(:)
+    real*8                  , allocatable :: H(:, :), S(:, :), C(:, :), w(:)
     integer                               :: m, parity, ii
 
     !< determined number of radial distances
@@ -143,15 +143,8 @@ contains
 
         end do
 
-        !< construct kinetic energy matrix
-        allocate(T(1:sa_basis_n, 1:sa_basis_n))
-
-        T(:, :) = 0.0
-        do ii = 1, sa_basis_n
-
-          T(ii, ii) = get_energy(sa_basis%b(ii))
-
-        end do
+        !< allocate kinetic + nuclear potential matrix
+        allocate(H(1:sa_basis_n, 1:sa_basis_n))
 
         !< allocate eigencoefficients and eigenvalues
         allocate(C(1:sa_basis_n, 1:sa_basis_n))
@@ -161,8 +154,16 @@ contains
         !< radial-separation
         do ii = 1, core_n
 
-          call core_states(ii)%spectrum(sa_basis, T, S, C, w)
+          !< construct nuclear potential (note. alters data_in%Rd)
+          call nuclear_potential(core_states(ii)%get_radial_distance())
 
+          !< construct nuclear hamiltonian matrix
+          call nuclear_hamiltonian(sa_basis, H)
+
+          !< determine spectrum
+          call core_states(ii)%spectrum(sa_basis, H, S, C, w)
+
+          !< record energy of the system
           potential_curve(ii, m, parity) = &
               core_states(ii)%get_electronic_energy() + &
               core_states(ii)%get_nuclear_energy() + &
@@ -170,7 +171,7 @@ contains
 
         end do
 
-        deallocate(S, T, C, w)
+        deallocate(S, H, C, w)
 
       end do
 
