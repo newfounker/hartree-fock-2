@@ -19,7 +19,6 @@ contains
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !> variable data_in.
   subroutine structure_simple ()
-    character(len = *)      , parameter   :: scratch_file = "../output/scratch.dat"
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
@@ -42,11 +41,7 @@ contains
     call nuclear_hamiltonian(basis, H)
 
     !< perform hartree_fock procedure (assuming m = 0)
-    call hf_procedure(basis, H, integrals, scratch_file)
-
-    !< core wavefunctions
-    call core%read_from(scratch_file)
-    ! call core%write_pw_to("../output/")
+    call hf_procedure(basis, H, integrals, core)
 
   end subroutine structure_simple
 
@@ -57,7 +52,6 @@ contains
   subroutine structure_core (core_grid, core_states)
     real*8                  , intent(in)  :: core_grid(:)
     type(core_state)        , intent(out) :: core_states(:)
-    character(len = *)      , parameter   :: scratch_file = "../output/scratch.dat"
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
@@ -87,10 +81,7 @@ contains
       call nuclear_hamiltonian(basis, H)
 
       !< perform hartree_fock procedure (assuming m = 0)
-      call hf_procedure(basis, H, integrals, scratch_file)
-
-      !< read in energy
-      call core_states(ii)%read_from(scratch_file)
+      call hf_procedure(basis, H, integrals, core_states(ii))
 
     end do
 

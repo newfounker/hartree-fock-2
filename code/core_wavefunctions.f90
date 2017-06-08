@@ -78,10 +78,13 @@ contains
     real*8            , intent(in)    :: radial_distance
     real*8            , intent(in)    :: electronic_energy
     real*8            , intent(in)    :: nuclear_energy
-    real*8            , intent(in)    :: pw(:, :, :)
-    integer                           :: s, l, kk
+    real*8            , intent(in)    :: pw(:, labot:, :)
+    integer                           :: s, l, kk, lambda
     integer                           :: mini, maxi
-    integer                           :: grid_n
+
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        constructing"
 
     !< record state information
     core%m = m
@@ -95,21 +98,45 @@ contains
     !< orbital partial waves
     allocate(core%pw(core%labot:core%latop, 1:(core%n_e + 1) / 2))
 
-    grid_n = size(pw(:, :, :), 1)
+    grid%nr = size(pw(:, :, :), 1)
 
     kk = 1
     do s = 1, (core%n_e + 1) / 2
 
       do l = core%labot, core%latop
 
-        call minmaxi(pw(:, l, s), grid_n, mini, maxi)
+        call minmaxi(pw(:, l, s), grid%nr, mini, maxi)
 
         call init_function(core%pw(l, s), l, core%m, kk, mini, maxi, &
-            pw(:, l, s), grid_n)
+            pw(:, l, s), grid%nr)
 
         kk = kk + 1
 
       end do
+
+    end do
+
+    !< examine spectroscopic factors
+    call calc_spectroscopic_factors(core)
+
+    !< coulomb partial waves
+    allocate(core%coulomb_pw(1:grid%nr, 0:2*core%latop))
+    call calc_coulomb_potential(core)
+
+    !< potential (e-e coulomb + nuclear coulomb) partial waves
+    allocate(core%potential_pw(1:grid%nr, 0:max(ubound(vnc, 2), 2*core%latop)))
+
+    core%potential_pw(:, :) = 0.0
+
+    do lambda = lbound(vnc, 2), ubound(vnc, 2)
+
+      core%potential_pw(:, lambda) = core%potential_pw(:, lambda) + vnc(:, lambda)
+
+    end do
+
+    do lambda = 0, 2*core%latop
+
+      core%potential_pw(:, lambda) = core%potential_pw(:, lambda) + core%coulomb_pw(:, lambda)
 
     end do
 
@@ -728,13 +755,13 @@ contains
 
           if (abs(spectroscopic(l, s)) > 1.0e-5) then
 
-            write (*, '(i4, f10.3)') l, spectroscopic(l, s)
+            write (*, '(i4, f10.5)') l, spectroscopic(l, s)
 
           end if
 
       end do
 
-      write (*, '(a, f10.3)') " sum", sum(spectroscopic(:, s))
+      write (*, '(a, f10.5)') " sum", sum(spectroscopic(:, s))
       write (*, *)
 
     end do

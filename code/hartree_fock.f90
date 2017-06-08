@@ -15,11 +15,11 @@ contains
 !> Performs Hartree-Fock procedure assuming that the basis has already been
 !>  diagonalised, and that the hamiltonian contains the nuclear potential.
 !> Records results of procedure in core_state.
-  subroutine hf_procedure (basis, H, integrals, filepath)
+  subroutine hf_procedure (basis, H, integrals, core)
     type(basis_sturmian_nr) , intent(in)  :: basis
     real*8                  , intent(in)  :: H(:, :)
     real*8                  , intent(in)  :: integrals(:, :, :, :)
-    character(len = *)      , intent(in)  :: filepath
+    type(core_state)        , intent(out) :: core
     real*8                  , allocatable :: C(:, :)
     real*8                  , allocatable :: P(:, :)
     real*8                  , allocatable :: G(:, :)
@@ -64,7 +64,7 @@ contains
     hf_energy = (data_in%Z1 * data_in%Z2 / data_in%Rd) + &
         calc_electronic_energy (data_in%n_e, C, P, H, F)
 
-    call hf_write_results(basis, C, hf_energy, filepath)
+    call hf_core(basis, C, hf_energy, core)
 
   end subroutine hf_procedure
 
@@ -508,8 +508,7 @@ contains
 
     ! allocate(temp(1:grid%nr, -data_in%latop:data_in%latop, 0:data_in%latop, &
     !     1:((data_in%n_e + 1)/2)))
-    allocate(temp(1:grid%nr, 0:data_in%latop, &
-        1:((data_in%n_e + 1)/2)))
+    allocate(temp(1:grid%nr, 0:data_in%latop, 1:((data_in%n_e + 1)/2)))
 
     !< plot partial wave expansions of spatial orbitals
     temp(:, :, :) = 0.0
@@ -594,8 +593,7 @@ contains
     integer                               :: s, l, ii
     real*8                                :: spectroscopic
 
-    allocate(pw(1:grid%nr, 0:data_in%latop, &
-        1:((data_in%n_e + 1)/2)))
+    allocate(pw(1:grid%nr, 0:data_in%latop, 1:((data_in%n_e + 1)/2)))
 
     !< plot partial wave expansions of spatial orbitals
     pw(:, :, :) = 0.0
@@ -625,6 +623,28 @@ contains
       pw = 0.0
 
     end where
+
+    do s = 1, (data_in%n_e + 1) / 2
+
+      write (*, "(a, i3)") ">> spatial orbtial:", s
+      write (*, "(a3, a8)") "l", "<l|l>"
+
+      do l = data_in%labot, data_in%latop
+
+          spectroscopic = sum((pw(:, l, s) ** 2) * grid%weight(:))
+
+          if (abs(spectroscopic) > 1.0e-5) then
+
+            write (*, "(i3, f8.5)") &
+                l, spectroscopic
+
+          end if
+
+      end do
+
+      write (*, *)
+
+    end do
 
     !< record state information and partial waves in core_state
     call core%construct_core_state(0, data_in%n_e, data_in%labot, data_in%latop,&
