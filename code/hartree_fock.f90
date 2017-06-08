@@ -3,6 +3,7 @@ module hartree_fock
   use input_data
   use grid_radial
   use sturmian_class
+  use core_wavefunctions
   use omp_lib
   implicit none
 
@@ -12,7 +13,8 @@ module hartree_fock
 contains
 
 !> Performs Hartree-Fock procedure assuming that the basis has already been
-!> diagonalised, and that the hamiltonian contains the nuclear potential.
+!>  diagonalised, and that the hamiltonian contains the nuclear potential.
+!> Records results of procedure in core_state.
   subroutine hf_procedure (basis, H, integrals, filepath)
     type(basis_sturmian_nr) , intent(in)  :: basis
     real*8                  , intent(in)  :: H(:, :)
@@ -545,7 +547,9 @@ contains
     write(unitno, *) 0 ! core%m
     write(unitno, *) data_in%n_e
     write(unitno, *) data_in%labot, data_in%latop
+    write(unitno, *) data_in%Rd
     write(unitno, *) hf_energy
+    write(unitno, *) data_in%Z1 * data_in%Z2 / data_in%Rd
 
     write(unitno, *) grid%nr
     write(unitno, *) grid%gridr(:)
@@ -577,5 +581,55 @@ contains
     close (unitno)
 
   end subroutine hf_write_results
+
+
+!> records hartree_fock results in a core_state variable.
+!>  pw(:, l, s) is the plot of the s-th spatial orbital's l-th partial wave.
+  subroutine hf_core (basis, C, hf_energy, core)
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    real*8                  , intent(in)  :: C(:, :)
+    real*8                  , intent(in)  :: hf_energy
+    type(core_state)        , intent(out) :: core
+    real*8                  , allocatable :: pw(:, :, :)
+    integer                               :: s, l, ii
+    real*8                                :: spectroscopic
+
+    allocate(pw(1:grid%nr, 0:data_in%latop, &
+        1:((data_in%n_e + 1)/2)))
+
+    !< plot partial wave expansions of spatial orbitals
+    pw(:, :, :) = 0.0
+
+    do s = 1, (data_in%n_e + 1) / 2
+
+      do l = 0, data_in%latop
+
+        do ii = 1, basis_size(basis)
+
+          if (get_ang_mom(basis%b(ii)) == l) then
+
+            pw(:, l, s) = pw(:, l, s) + &
+                (C(ii, s) * fpointer(basis%b(ii)))
+
+          end if
+
+        end do
+
+      end do
+
+    end do
+
+    !< remove underflow errors
+    where (abs(pw) > 1.0e5)
+
+      pw = 0.0
+
+    end where
+
+    !< record state information and partial waves in core_state
+    call core%construct_core_state(0, data_in%n_e, data_in%labot, data_in%latop,&
+        data_in%Rd, hf_energy, data_in%Z1 * data_in%Z2 / data_in%Rd, pw)
+
+  end subroutine hf_core
 
 end module hartree_fock

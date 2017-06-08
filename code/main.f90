@@ -12,35 +12,30 @@ program main
 !
   integer:: Number_one_electron_func, ipar
 
-  character(len = 200) :: input_file, hf_file, curve_file
+  character(len = 200) :: input_file
   integer              :: ii
+  integer , parameter  :: core_n = 20
+  real*8               :: core_grid(1:core_n)
+
+  forall (ii = 1:core_n) core_grid(ii) = exp((2.0 * ii) / core_n) - 1.0
 
   write (*, "(a)") "> main"
 
   if (command_argument_count() < 3) then
 
-    write (*, *) "missing (< 3) arguments (input, hf and potential curve files)"
-    write (*, *) "assuming default values"
+    write (*, "(a)") ">> missing arguments; assuming default values"
     write (*, *)
 
     input_file = "../input/input.dat"
-    hf_file = "../output/hf_results.dat"
-    curve_file = "../output/curve.dat"
 
   else
 
     call get_command_argument(1, input_file)
-    call get_command_argument(2, hf_file)
-    call get_command_argument(3, curve_file)
 
   end if
 
   write (*, "(a, a)") &
       " input_file: ", input_file
-  write (*, "(a, a)") &
-      " hf_file:    ", hf_file
-  write (*, "(a, a)") &
-      " curve_file: ", curve_file
 
 
   call readin(data_in, trim(input_file), .true.)
@@ -49,7 +44,10 @@ program main
 
   call construct_vnc(grid%nr, grid%gridr)
 
-  call hf_structure (trim(hf_file))
+  call structure_simple()
+  ! call structure_core(core_grid)
+
+
 
 !   ! Determine number of one-electron target states
 !   Number_one_electron_func = 0

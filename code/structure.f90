@@ -11,78 +11,99 @@ module structure
   use core_wavefunctions
   implicit none
 
+  private
+  public structure_simple, structure_core
+
 contains
 
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !> variable data_in.
-!> Writes the results of the HF procedure to the specified output file
-  subroutine hf_structure (hf_file)
-    character(len = *)      , intent(in)  :: hf_file
+  subroutine structure_simple ()
+    character(len = *)      , parameter   :: scratch_file = "../output/scratch.dat"
     type(basis_sturmian_nr)               :: basis
     real*8                  , allocatable :: H(:, :)
     real*8                  , allocatable :: integrals(:, :, :, :)
-    real*8                  , allocatable :: curve(:), curve_grid(:)
-    integer                               :: curve_n
-    integer                               :: n, ii
-    type(core_state)        , pointer     :: core
+    type(core_state)                      :: core
+    integer                               :: basis_n, ii
 
     !< construct basis
     call construct_diagonalised(basis)
 
-    n = basis_size(basis)
+    basis_n = basis_size(basis)
 
     !< construct two-electron integrals
-    allocate(integrals(1:n, 1:n, 1:n, 1:n))
+    allocate(integrals(1:basis_n, 1:basis_n, 1:basis_n, 1:basis_n))
     call two_electron_integrals(basis, integrals)
 
     !< allocate nuclear hamiltonian
-    allocate(H(1:n, 1:n))
+    allocate(H(1:basis_n, 1:basis_n))
 
-    !< loop over nuclear radial distance values to construct potential energy
-    !< curve.
-    curve_n = 20
+    !< construct nuclear hamiltonian matrix
+    call nuclear_hamiltonian(basis, H)
 
-    allocate(curve_grid(1:curve_n))
-    allocate(curve(1:curve_n))
+    !< perform hartree_fock procedure (assuming m = 0)
+    call hf_procedure(basis, H, integrals, scratch_file)
 
-    do ii = 1, curve_n
+    !< core wavefunctions
+    call core%read_from(scratch_file)
+    ! call core%write_pw_to("../output/")
 
-      curve_grid(ii) = exp((2.0 * ii) / curve_n) - 1.0
+  end subroutine structure_simple
 
-      !< construct nuclear potential
-      call nuclear_potential(curve_grid(ii))
+!> Performs the Hartree-Fock procedure for the system specified in the global
+!>  variable data_in, but across a range of radial distance values.
+!> Stores the results in an array of core_states, one for each radial distance.
+!> Note that this subroutine modifies the value of data_in%Rd.
+  subroutine structure_core (core_grid, core_states)
+    real*8                  , intent(in)  :: core_grid(:)
+    type(core_state)        , intent(out) :: core_states(:)
+    character(len = *)      , parameter   :: scratch_file = "../output/scratch.dat"
+    type(basis_sturmian_nr)               :: basis
+    real*8                  , allocatable :: H(:, :)
+    real*8                  , allocatable :: integrals(:, :, :, :)
+    integer                               :: basis_n, core_n, ii
+
+    !< construct basis
+    call construct_diagonalised(basis)
+
+    basis_n = basis_size(basis)
+
+    !< construct two-electron integrals
+    allocate(integrals(1:basis_n, 1:basis_n, 1:basis_n, 1:basis_n))
+    call two_electron_integrals(basis, integrals)
+
+    !< allocate nuclear hamiltonian
+    allocate(H(1:basis_n, 1:basis_n))
+
+    !< calculate core states for varying radial-separation
+    core_n = size(core_grid)
+
+    do ii = 1, core_n
+
+      !< construct nuclear potential (note. alters data_in%Rd)
+      call nuclear_potential(core_grid(ii))
 
       !< construct nuclear hamiltonian matrix
       call nuclear_hamiltonian(basis, H)
 
       !< perform hartree_fock procedure (assuming m = 0)
-      call hf_procedure(basis, H, integrals, hf_file)
+      call hf_procedure(basis, H, integrals, scratch_file)
 
       !< read in energy
-      allocate(core)
-      call core%read_from("../output/hf_results.dat")
-      curve(ii) = core%get_frozen_energy() + (data_in%Z1 * data_in%Z2 / curve_grid(ii))
-      deallocate(core)
+      call core_states(ii)%read_from(scratch_file)
 
     end do
 
-    !< write potential curve to file
-    open(1000, file = "../output/curve.dat")
-    do ii = 1, curve_n
+    do ii = 1, core_n
 
-      write (1000, *) curve_grid(ii), curve(ii)
+      write (*, "(3f10.5)") &
+          core_grid(ii), &
+          core_states(ii)%get_electronic_energy(), &
+          core_states(ii)%get_nuclear_energy()
 
     end do
-    close(1000)
 
-    !< core wavefunctions
-    ! call core%read_from("../output/hf_results.dat")
-    ! call core%write_pw_to("../output/core_plots.dat")
-    ! call core%write_coulomb_pw_to("../output/core_coulomb.dat")
-    ! call core%write_potential_pw_to("../output/core_potential.dat")
-    ! call core_spectrum(core, basis, n, no, H, S)
-
-  end subroutine hf_structure
+  end subroutine structure_core
 
 !> Constructs a diagonalised basis, specified by the global data_in variable,
 !> which is diagonalised with regard to the kinetic energy operator.
@@ -166,15 +187,18 @@ contains
 
   end subroutine construct_diagonalised
 
-!> Construct nuclear potential
+!> Construct nuclear potential.
+!>  Note that data_in%Rd is modified.
   subroutine nuclear_potential (rd)
     real*8  , intent(in) :: rd
     integer              :: lamtop_vc_set
 
-    vnc(:, :) = 0.0
+    !< reset data_in%Rd to given value
+    data_in%Rd = rd
 
+    !< recalculate nuclear potential partial waves
     call VLambdaR(grid%nr, grid%gridr, data_in%ltmax, data_in%Z1, data_in%Z2, &
-        rd, data_in%origin, vnc, minvnc, maxvnc, lamtop_vc_set)
+        data_in%Rd, data_in%origin, vnc, minvnc, maxvnc, lamtop_vc_set)
 
   end subroutine nuclear_potential
 
@@ -328,5 +352,52 @@ contains
     write (*, *)
 
   end subroutine two_electron_integrals
+
+!> Record elements of a basis which satisfy given symmetries of parity and
+!> angular momentum projection.
+  subroutine symmetry_adaption (basis, parity, m, sa_n, sa_i)
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    integer                 , intent(in)  :: parity
+    integer                 , intent(in)  :: m
+    integer                 , intent(out) :: sa_n
+    integer       , pointer , intent(out) :: sa_i(:)
+    type(sturmian_nr)       , pointer     :: p
+    integer                               :: sa_n_temp
+    integer                 , allocatable :: sa_i_temp(:)
+    integer                               :: n, ii
+
+    !< get basis size
+    n = basis_size(basis)
+
+    !< set up temporary symmetry-adapted indexes
+    allocate(sa_i_temp(1:n))
+
+    sa_i_temp(:) = 0
+    sa_n_temp = 0
+
+    !< record symmetry-adapted basis functions
+    do ii = 1, n
+
+      p => basis%b(ii)
+
+      if ((((-1) ** get_ang_mom(p)) == parity) &
+          .and. (get_ang_mom_proj(p) == m)) then
+
+        sa_n_temp = sa_n_temp + 1
+
+        sa_i_temp(sa_n_temp) = ii
+
+      end if
+
+    end do
+
+    !< transfer temporary values across
+    sa_n = sa_n_temp
+
+    allocate(sa_i(1:sa_n))
+
+    sa_i(:) = sa_i_temp(:)
+
+  end subroutine symmetry_adaption
 
 end module structure

@@ -30,7 +30,9 @@ module core_wavefunctions
     integer                         :: m
     integer                         :: n_e
     integer                         :: labot, latop
-    real*8                          :: energy
+    real*8                          :: radial_distance
+    real*8                          :: electronic_energy
+    real*8                          :: nuclear_energy
     type(sturmian_nr) , allocatable :: pw(:, :)
 
     real*8            , allocatable :: coulomb_pw(:, :)
@@ -38,7 +40,11 @@ module core_wavefunctions
 
   contains
 
-    procedure , pass :: get_frozen_energy
+    procedure , pass :: construct_core_state
+
+    procedure , pass :: get_radial_distance
+    procedure , pass :: get_electronic_energy
+    procedure , pass :: get_nuclear_energy
 
     procedure , pass :: get_pw_functions
     procedure , pass :: get_coulomb_pw
@@ -48,8 +54,13 @@ module core_wavefunctions
     procedure , pass :: exchange_me
     procedure , pass :: potential_me
 
+    procedure , pass :: spectrum
+
     procedure , pass :: read_from
+    procedure , pass :: write_to
+
     procedure , pass :: write_pw_to
+    procedure , pass :: write_orbital_pw_to
     procedure , pass :: write_coulomb_pw_to
     procedure , pass :: write_potential_pw_to
 
@@ -57,71 +68,82 @@ module core_wavefunctions
 
 contains
 
-!> diagonalise a basis with frozen core electron potentials
-!>  Assumes that prediag (from one_electron_func) is true; that is, already
-!>  diagonalised with kinetic matrix.
-  subroutine core_spectrum (core, basis, nd, no, H, S)
-    type(core_state)        , intent(in)  :: core
-    type(basis_sturmian_nr) , intent(in)  :: basis
-    integer                 , intent(in)  :: nd
-    integer                 , intent(in)  :: no(:)
-    real*8                  , intent(in)  :: H(:, :)
-    real*8                  , intent(in)  :: S(:, :)
-    real*8                  , allocatable :: V(:, :)
-    real*8                  , allocatable :: C(:, :), w(:)
-    type(sturmian_nr)       , pointer     :: pi, pj
-    integer                               :: ierr
-    integer                               :: ii, jj
+!> construct_core_state
+  subroutine construct_core_state (core, m, n_e, labot, latop, &
+      radial_distance, electronic_energy, nuclear_energy, pw)
+    class(core_state) , intent(inout) :: core
+    integer           , intent(in)    :: m
+    integer           , intent(in)    :: n_e
+    integer           , intent(in)    :: labot, latop
+    real*8            , intent(in)    :: radial_distance
+    real*8            , intent(in)    :: electronic_energy
+    real*8            , intent(in)    :: nuclear_energy
+    real*8            , intent(in)    :: pw(:, :, :)
+    integer                           :: s, l, kk
+    integer                           :: mini, maxi
+    integer                           :: grid_n
 
-    write (*, *) "diagonalising with nuclear, coulomb and exchange potentials"
+    !< record state information
+    core%m = m
+    core%n_e = n_e
+    core%labot = labot
+    core%latop = latop
+    core%radial_distance = radial_distance
+    core%electronic_energy = electronic_energy
+    core%nuclear_energy = nuclear_energy
 
-    !< coulomb potential matrix
-    allocate(V(1:nd, 1:nd))
-    V(:, :) = 0d0
+    !< orbital partial waves
+    allocate(core%pw(core%labot:core%latop, 1:(core%n_e + 1) / 2))
 
-    do ii = 1, nd
+    grid_n = size(pw(:, :, :), 1)
 
-      do jj = 1, nd
+    kk = 1
+    do s = 1, (core%n_e + 1) / 2
 
-        pi => basis%b(no(ii))
-        pj => basis%b(no(jj))
+      do l = core%labot, core%latop
 
-        V(ii, jj) = core%potential_me(pi, pj)
+        call minmaxi(pw(:, l, s), grid_n, mini, maxi)
+
+        call init_function(core%pw(l, s), l, core%m, kk, mini, maxi, &
+            pw(:, l, s), grid_n)
+
+        kk = kk + 1
 
       end do
 
     end do
 
-    !< diagonalise
-    allocate(C(1:nd, 1:nd))
-    allocate(w(1:nd))
+  end subroutine construct_core_state
 
-    call rsg(nd, nd, H + V, S, w, 2, C, ierr)
-
-    if (ierr /= 0) then
-      write (*, "(a)") "rsg failed to diagonalise the system"
-    end if
-
-    !< write eigenvalues
-    do ii = 1, nd
-      write (*, '(i4, f10.3)') ii, w(ii)
-    end do
-
-    write (*, *)
-
-  end subroutine core_spectrum
-
-!> .............................................................................
-
-!> get_frozen_energy
+!> get_radial_distance
 !>   energy associated with frozen core
-  function get_frozen_energy (core) result (energy)
+  function get_radial_distance (core) result (radial_distance)
     class(core_state) , intent(in) :: core
-    real*8                         :: energy
+    real*8                         :: radial_distance
 
-    energy = core%energy
+    radial_distance = core%radial_distance
 
-  end function get_frozen_energy
+  end function get_radial_distance
+
+!> get_electronic_energy
+!>   energy associated with frozen core
+  function get_electronic_energy (core) result (electronic_energy)
+    class(core_state) , intent(in) :: core
+    real*8                         :: electronic_energy
+
+    electronic_energy = core%electronic_energy
+
+  end function get_electronic_energy
+
+!> get_nuclear_energy
+!>   energy associated with frozen core
+  function get_nuclear_energy (core) result (nuclear_energy)
+    class(core_state) , intent(in) :: core
+    real*8                         :: nuclear_energy
+
+    nuclear_energy = core%nuclear_energy
+
+  end function get_nuclear_energy
 
 !> get_pw_functions
   subroutine get_pw_functions (core, pw)
@@ -267,6 +289,61 @@ contains
 
   end function potential_me
 
+!> diagonalise a basis with frozen core electron potentials
+!>  sa_i(:) are the indexes of the symmetry-adapted basis functions (w.r.t. the
+!>    larger basis)
+!>  sa_n is the number of symmetry-adapted basis functions
+  subroutine spectrum (core, basis, sa_n, sa_i, T, S)
+    class(core_state)       , intent(in)  :: core
+    type(basis_sturmian_nr) , intent(in)  :: basis
+    integer                 , intent(in)  :: sa_n
+    integer                 , intent(in)  :: sa_i(:)
+    real*8                  , intent(in)  :: T(:, :)
+    real*8                  , intent(in)  :: S(:, :)
+    real*8                  , allocatable :: V(:, :)
+    real*8                  , allocatable :: C(:, :), w(:)
+    type(sturmian_nr)       , pointer     :: pi, pj
+    integer                               :: ierr
+    integer                               :: ii, jj
+
+    write (*, *) "diagonalising with nuclear, coulomb and exchange potentials"
+
+    !< (coulomb + exchange) potential matrix
+    allocate(V(1:sa_n, 1:sa_n))
+    V(:, :) = 0d0
+
+    do ii = 1, sa_n
+
+      do jj = 1, sa_n
+
+        pi => basis%b(sa_i(ii))
+        pj => basis%b(sa_i(jj))
+
+        V(ii, jj) = core%potential_me(pi, pj)
+
+      end do
+
+    end do
+
+    !< diagonalise
+    allocate(C(1:sa_n, 1:sa_n))
+    allocate(w(1:sa_n))
+
+    call rsg(sa_n, sa_n, T + V, S, w, 2, C, ierr)
+
+    if (ierr /= 0) then
+      write (*, "(a)") "rsg failed to diagonalise the system"
+    end if
+
+    !< write eigenvalues
+    do ii = 1, sa_n
+      write (*, '(i4, f10.3)') ii, w(ii)
+    end do
+
+    write (*, *)
+
+  end subroutine spectrum
+
 !> read_from
 !>  Reads core radial wavefunctions (partial wave expansions) from a given file.
 !>  The wave functions are then interpolated to be plotted on a new
@@ -319,17 +396,19 @@ contains
     write (*, *) "reading ", filepath
 
     !< read state information
-    read(unitno, *) core%m
-    read(unitno, *) core%n_e
-    read(unitno, *) core%labot, core%latop
-    read(unitno, *) core%energy
+    read (unitno, *) core%m
+    read (unitno, *) core%n_e
+    read (unitno, *) core%labot, core%latop
+    read (unitno, *) core%radial_distance
+    read (unitno, *) core%electronic_energy
+    read (unitno, *) core%nuclear_energy
 
     !< read original grid
-    read(unitno, *) temp_nr
+    read (unitno, *) temp_nr
 
     allocate(temp_grid(1:temp_nr))
 
-    read(unitno, *) temp_grid(1:temp_nr)
+    read (unitno, *) temp_grid(1:temp_nr)
 
     !< locate point where original grid ends
     grid_cutoff = grid%nr
@@ -361,7 +440,7 @@ contains
 
       do l = core%labot, core%latop
 
-        read(unitno, *) temp_pw(:, l, s)
+        read (unitno, *) temp_pw(:, l, s)
 
       end do
 
@@ -435,10 +514,82 @@ contains
 
   end subroutine read_from
 
+
+!> write_to
+!>  writes core state information to a file (same form as it would expect to
+!>  read_from).
+  subroutine write_to (core, filepath)
+    class(core_state)  , intent(inout) :: core
+    character(len = *) , intent(in)    :: filepath
+    real*8             , allocatable   :: pw(:, :, :)
+    integer                            :: unitno
+    integer                            :: s, l
+
+    write (*, "(a)") &
+        "> core-wavefunctions :: &
+        writing"
+
+    !< open file
+    unitno = 1000
+    write (*, *) "opening ", filepath
+
+    open(unitno, file = filepath)
+
+    !< write to file
+    write (*, *) "writing ", filepath
+
+    !< write state information
+    write (unitno, *) core%m
+    write (unitno, *) core%n_e
+    write (unitno, *) core%labot, core%latop
+    write (unitno, *) core%radial_distance
+    write (unitno, *) core%electronic_energy
+    write (unitno, *) core%nuclear_energy
+
+    !< write grid
+    write (unitno, *) grid%nr
+    write (unitno, *) grid%gridr(:)
+
+    !< write orbital partial waves
+    allocate(pw(1:grid%nr, core%labot:core%latop, 1:(core%n_e + 1) / 2))
+    call core%get_pw_functions(pw)
+
+    do s = 1, (core%n_e + 1) / 2
+
+      do l = core%labot, core%latop
+
+        write (unitno, *) pw(:, l, s)
+
+      end do
+
+    end do
+
+    !< close file
+    write (*, *) "closing ", filepath
+    close(unitno)
+
+    !< empty line
+    write (*, *)
+
+  end subroutine write_to
+
 !> write_pw_to
+!>  calls write_pw_to, write_coulomb_pw_to, write_potential_pw_to, writing to
+!>  data files in a given directory
+  subroutine write_pw_to (core, directory)
+    class(core_state)  , intent(inout) :: core
+    character(len = *) , intent(in)    :: directory
+
+    call core%write_orbital_pw_to(directory//"core_plots.dat")
+    call core%write_coulomb_pw_to(directory//"core_coulomb.dat")
+    call core%write_potential_pw_to(directory//"core_potential.dat")
+
+  end subroutine write_pw_to
+
+!> write_orbital_pw_to
 !>  write partial waves of core orbitals to a file, in a format suitable for
 !>  gnuplot
-  subroutine write_pw_to (core, filepath)
+  subroutine write_orbital_pw_to (core, filepath)
     class(core_state)  , intent(inout) :: core
     character(len = *) , intent(in)    :: filepath
     real*8             , allocatable   :: pw(:, :, :)
@@ -474,7 +625,7 @@ contains
     !< empty line
     write (*, *)
 
-  end subroutine write_pw_to
+  end subroutine write_orbital_pw_to
 
 !> write_coulomb_pw_to
 !>  write partial waves of core, coulomb potential to a file, in a format
