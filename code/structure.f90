@@ -47,11 +47,42 @@ contains
 
   end subroutine structure_simple
 
+!> Performs Hartree-Fock procedure to obtain set of core states, one for each
+!> radial distance, then diagonalises an active electron and obtains a potential
+!> energy curve.
+  subroutine structure_core ()
+    real*8           , allocatable :: core_grid(:)
+    type(core_state) , allocatable :: core_states(:)
+    real*8           , allocatable :: potential_curve(:, :, :)
+    integer                        :: core_n = 500
+    integer                        :: ii
+
+    !< allocate core variables
+    allocate(core_grid(1:core_n))
+    allocate(core_states(1:core_n))
+
+    !< setup core grid
+    do ii = 1, core_n
+
+      core_grid(ii) = exp((2.0 * ii) / core_n) - 1.0
+
+    end do
+
+    !< calculate core states
+    call calc_core_states(core_grid, core_states)
+
+    !< calculate potential energy curve
+    allocate(potential_curve(1:core_n, data_in%Mt_min:data_in%Mt_max, -1:1))
+
+    call calc_potential_curve(core_states, potential_curve)
+
+  end subroutine structure_core
+
 !> Performs the Hartree-Fock procedure for the system specified in the global
 !>  variable data_in, but across a range of radial distance values.
 !> Stores the results in an array of core_states, one for each radial distance.
 !> Note that this subroutine modifies the value of data_in%Rd.
-  subroutine structure_core (core_grid, core_states)
+  subroutine calc_core_states (core_grid, core_states)
     real*8                  , intent(in)  :: core_grid(:)
     type(core_state)        , intent(out) :: core_states(:)
     type(basis_sturmian_nr)               :: basis, core_basis
@@ -90,26 +121,15 @@ contains
 
     end do
 
-    ! do ii = 1, core_n
-
-    !   write (*, "(3f10.5)") &
-    !       core_grid(ii), &
-    !       core_states(ii)%get_electronic_energy(), &
-    !       core_states(ii)%get_nuclear_energy()
-
-    ! end do
-
-    call core_potential_curve(core_states)
-
-  end subroutine structure_core
+  end subroutine calc_core_states
 
 !> Construct potential energy curve for frozen core w/ active electron, for a
 !> number of target symmetries, as specified in data_in.
-  subroutine core_potential_curve (core_states)
+  subroutine calc_potential_curve (core_states, potential_curve)
     type(core_state)        , intent(in)  :: core_states(:)
+    real*8                  , intent(out) :: potential_curve(:, data_in%Mt_min:, -1:)
     type(basis_sturmian_nr)               :: basis, sa_basis
     integer                               :: core_n, sa_basis_n
-    real*8                  , allocatable :: potential_curve(:, :, :)
     real*8                  , allocatable :: H(:, :), S(:, :), C(:, :), w(:)
     integer                               :: m, parity, ii
 
@@ -121,8 +141,6 @@ contains
 
     !< construct potential energy curve of active electron w/ frozen core for
     !< target symmetries specified in data_in
-    allocate(potential_curve(1:core_n, data_in%Mt_min:data_in%Mt_max, -1:1))
-
     potential_curve(:, :, :) = 0.0
 
     do m = data_in%Mt_min, data_in%Mt_max
@@ -187,8 +205,7 @@ contains
     end do
     close(unit = 1000)
 
-  end subroutine core_potential_curve
-
+  end subroutine calc_potential_curve
 
 !> Constructs a diagonalised basis, specified by the global data_in variable,
 !> which is diagonalised with regard to the kinetic energy operator.

@@ -15,9 +15,6 @@ program main
 
   character(len = 200) :: input_file
   integer              :: ii
-  integer , parameter  :: core_n = 50
-  real*8               :: core_grid(1:core_n)
-  type(core_state)     :: core_states(1:core_n)
 
   write (*, "(a)") "> main"
 
@@ -46,9 +43,7 @@ program main
 
 
   ! call structure_simple()
-
-  forall (ii = 1:core_n) core_grid(ii) = exp((2.0 * ii) / core_n) - 1.0
-  call structure_core(core_grid, core_states)
+  call structure_core()
 
 
 
