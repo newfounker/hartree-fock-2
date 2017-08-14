@@ -1,4 +1,5 @@
 module hartree_fock
+!> possible problem with odd number of electrons - check expression for G
 
   use input_data
   use grid_radial
@@ -49,7 +50,7 @@ contains
     w(:)    = 0.0
 
     converged = .true.
-    ii        = 1
+    ii        = 0
 
     do while ((ii <= data_in%n_e) .and. (converged))
 
@@ -57,7 +58,7 @@ contains
 
       call write_energy(H, integrals, ii, C, w)
 
-      ii = ii + 1
+      ii = ii + 2
 
     end do
 
@@ -98,7 +99,7 @@ contains
     real*8  , allocatable   :: P_iter(:, :, :)
     integer                 :: K
     integer                 :: iter
-    integer                 :: ii
+    integer                 :: ii, jj ! for printing matrix elements
 
     write (*, "(a, i3)") ">> hartree-fock iterative scheme"
     write (*, "(a, i4)") &
@@ -129,8 +130,6 @@ contains
 
       call check_convergence(P_iter, iter, converged)
 
-      ! call print_matrix(P_iter(iter, :, :))
-
     end do
 
     if (converged) then
@@ -140,8 +139,9 @@ contains
       write (*, "(a, i5)") &
           " iterations: ", iter
 
-      ! call print_matrix(P)
       ! call print_matrix(C)
+      ! call print_matrix(P)
+      ! call print_matrix(G)
       ! call print_matrix(F)
 
     else
@@ -228,9 +228,9 @@ contains
     !$omp end parallel do
 
     !< additional sum for odd-number of electrons
-    s = n_e / 2
-
     if (mod(n_e, 2) == 1) then
+
+      s = n_e / 2
 
       !$omp parallel do private(ii, jj, kk, ll) shared(G, C, integrals, K, S)
       do ii = 1, K
@@ -353,9 +353,9 @@ contains
     end do
 
     !< odd number of electrons
-    s = n_e / 2
-
     if (mod(n_e, 2) == 1) then
+
+      s = n_e / 2
 
       do ii = 1, K
 
@@ -468,6 +468,12 @@ contains
     integer              :: ii, jj, max_size
 
     max_size = 25
+
+    if (size(matrix, 1) > max_size) then
+
+      write (*, "(a)") "(truncated)"
+
+    end if
 
     do ii = 1, min(max_size, size(matrix, 1))
 

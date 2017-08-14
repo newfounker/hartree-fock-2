@@ -1,4 +1,15 @@
 module structure
+!> 1 diatomics, compare with moccia
+!> 2 generalise the nuclear potential
+!> paper - cpc
+!> 3 compare with numerical codes, use sto -> sc conversion & verify
+!> 4 scattering on He2+
+!> paper - general physics
+
+!> potential curve for excited states
+!> oscillatory strengths
+!> local exchange approximation
+!> vibrational structure
 
   use input_data
   use grid_radial
@@ -51,10 +62,11 @@ contains
 !> radial distance, then diagonalises an active electron and obtains a potential
 !> energy curve.
   subroutine structure_core ()
+    type(basis_sturmian_nr)        :: basis
     real*8           , allocatable :: core_grid(:)
     type(core_state) , allocatable :: core_states(:)
-    real*8           , allocatable :: potential_curve(:, :, :)
-    integer                        :: core_n = 500
+    real*8           , allocatable :: potential_curve(:, :)
+    integer                        :: core_n = 100
     integer                        :: ii
 
     !< allocate core variables
@@ -71,10 +83,13 @@ contains
     !< calculate core states
     call calc_core_states(core_grid, core_states)
 
-    !< calculate potential energy curve
-    allocate(potential_curve(1:core_n, data_in%Mt_min:data_in%Mt_max, -1:1))
+    !< construct basis
+    call construct_diagonalised(basis)
 
-    call calc_potential_curve(core_states, potential_curve)
+    !< calculate potential energy curve
+    allocate(potential_curve(1:basis_size(basis), 1:core_n))
+
+    call calc_potential_curve(basis, core_states, potential_curve)
 
   end subroutine structure_core
 
@@ -125,82 +140,72 @@ contains
 
 !> Construct potential energy curve for frozen core w/ active electron, for a
 !> number of target symmetries, as specified in data_in.
-  subroutine calc_potential_curve (core_states, potential_curve)
+  subroutine calc_potential_curve (basis, core_states, potential_curve)
+    type(basis_sturmian_nr) , intent(in)  :: basis
     type(core_state)        , intent(in)  :: core_states(:)
-    real*8                  , intent(out) :: potential_curve(:, data_in%Mt_min:, -1:)
-    type(basis_sturmian_nr)               :: basis, sa_basis
-    integer                               :: core_n, sa_basis_n
+    real*8                  , intent(out) :: potential_curve(:, :)
+    integer                               :: core_n, basis_n
     real*8                  , allocatable :: H(:, :), S(:, :), C(:, :), w(:)
-    integer                               :: m, parity, ii
+    integer                               :: m, parity, ii, jj
 
     !< determined number of radial distances
     core_n = size(core_states)
 
-    !< construct basis
-    call construct_diagonalised(basis)
+    !< construct potential energy curve of active electron w/ frozen core
+    potential_curve(:, :) = 0.0
 
-    !< construct potential energy curve of active electron w/ frozen core for
-    !< target symmetries specified in data_in
-    potential_curve(:, :, :) = 0.0
+    basis_n = basis_size(basis)
 
-    do m = data_in%Mt_min, data_in%Mt_max
+    !< construct overlap matrix
+    allocate(S(1:basis_n, 1:basis_n))
 
-      do parity = -1, 1, 2
+    S(:, :) = 0.0
+    do ii = 1, basis_n
 
-        !< construct symmetry adapted basis
-        sa_basis = sa_parity(sa_projection(basis, m), parity)
-        sa_basis_n = basis_size(sa_basis)
+      S(ii, ii) = 1.0
 
-        !< construct overlap matrix
-        allocate(S(1:sa_basis_n, 1:sa_basis_n))
+    end do
 
-        S(:, :) = 0.0
-        do ii = 1, sa_basis_n
+    !< allocate kinetic + nuclear potential matrix
+    allocate(H(1:basis_n, 1:basis_n))
 
-          S(ii, ii) = 1.0
+    !< allocate eigencoefficients and eigenvalues
+    allocate(C(1:basis_n, 1:basis_n))
+    allocate(w(1:basis_n))
 
-        end do
+    !< determine spectrum of symmetry-adapted active electron at each
+    !< radial-separation
+    do ii = 1, core_n
 
-        !< allocate kinetic + nuclear potential matrix
-        allocate(H(1:sa_basis_n, 1:sa_basis_n))
+      !< construct nuclear potential (note. alters data_in%Rd)
+      call nuclear_potential(core_states(ii)%get_radial_distance())
 
-        !< allocate eigencoefficients and eigenvalues
-        allocate(C(1:sa_basis_n, 1:sa_basis_n))
-        allocate(w(1:sa_basis_n))
+      !< construct nuclear hamiltonian matrix
+      call nuclear_hamiltonian(basis, H)
 
-        !< determine spectrum of symmetry-adapted active electron at each
-        !< radial-separation
-        do ii = 1, core_n
+      !< determine spectrum
+      call core_states(ii)%spectrum(basis, H, S, C, w)
 
-          !< construct nuclear potential (note. alters data_in%Rd)
-          call nuclear_potential(core_states(ii)%get_radial_distance())
+      do jj = 1, basis_n
 
-          !< construct nuclear hamiltonian matrix
-          call nuclear_hamiltonian(sa_basis, H)
-
-          !< determine spectrum
-          call core_states(ii)%spectrum(sa_basis, H, S, C, w)
-
-          !< record energy of the system
-          potential_curve(ii, m, parity) = &
-              core_states(ii)%get_electronic_energy() + &
-              core_states(ii)%get_nuclear_energy() + &
-              w(1)
-
-        end do
-
-        deallocate(S, H, C, w)
+        !< record energy of the system
+        potential_curve(jj, ii) = &
+            core_states(ii)%get_electronic_energy() + &
+            core_states(ii)%get_nuclear_energy() + &
+            w(jj)
 
       end do
 
     end do
+
+    deallocate(S, H, C, w)
 
     open(unit = 1000, file = "../output/potential_curve.dat")
     do ii = 1, core_n
 
       write (1000, *) &
           core_states(ii)%get_radial_distance(), &
-          potential_curve(ii, :, -1:1:2)
+          potential_curve(:, ii)
 
     end do
     close(unit = 1000)
