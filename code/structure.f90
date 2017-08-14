@@ -62,7 +62,8 @@ contains
 !> radial distance, then diagonalises an active electron and obtains a potential
 !> energy curve.
   subroutine structure_core ()
-    type(basis_sturmian_nr)        :: basis
+    type(basis_sturmian_nr)        :: basis, sa_basis
+    integer                        :: sa_basis_n
     real*8           , allocatable :: core_grid(:)
     type(core_state) , allocatable :: core_states(:)
     real*8           , allocatable :: potential_curve(:, :)
@@ -86,10 +87,13 @@ contains
     !< construct basis
     call construct_diagonalised(basis)
 
-    !< calculate potential energy curve
-    allocate(potential_curve(1:basis_size(basis), 1:core_n))
+    sa_basis = sa_projection(basis, 0)
+    sa_basis_n = basis_size(sa_basis)
 
-    call calc_potential_curve(basis, core_states, potential_curve)
+    !< calculate potential energy curve
+    allocate(potential_curve(1:sa_basis_n, 1:core_n))
+
+    call calc_potential_curve(sa_basis, core_states, potential_curve)
 
   end subroutine structure_core
 
