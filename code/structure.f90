@@ -207,9 +207,17 @@ contains
     open(unit = 1000, file = "../output/potential_curve.dat")
     do ii = 1, core_n
 
-      write (1000, *) &
-          core_states(ii)%get_radial_distance(), &
-          potential_curve(:, ii)
+      write (1000, '(f15.8)', advance = 'no') &
+          core_states(ii)%get_radial_distance()
+
+      do jj = 1, basis_n
+
+        write (1000, '(f15.8)', advance = 'no') &
+            potential_curve(jj, ii)
+
+      end do
+
+      write (1000, *)
 
     end do
     close(unit = 1000)
