@@ -68,7 +68,9 @@ contains
     type(core_state) , allocatable :: core_states(:)
     real*8           , allocatable :: potential_curve(:, :)
     integer                        :: core_n = 100
-    integer                        :: ii
+    integer                        :: ii, jj
+    integer                        :: m, parity
+    character(len = 20)            :: filepath
 
     !< allocate core variables
     allocate(core_grid(1:core_n))
@@ -87,13 +89,50 @@ contains
     !< construct basis
     call construct_diagonalised(basis)
 
-    sa_basis = sa_projection(basis, 0)
-    sa_basis_n = basis_size(sa_basis)
+    !< loop over target symmetries
+    do parity = -1, 1, 2
 
-    !< calculate potential energy curve
-    allocate(potential_curve(1:sa_basis_n, 1:core_n))
+      do m = data_in%Mt_min, data_in%Mt_max
 
-    call calc_potential_curve(sa_basis, core_states, potential_curve)
+        sa_basis = sa_parity(sa_projection(basis, m), parity)
+        sa_basis_n = basis_size(sa_basis)
+
+        !< calculate potential energy curve
+        allocate(potential_curve(1:sa_basis_n, 1:core_n))
+
+        call calc_potential_curve(sa_basis, core_states, potential_curve)
+
+        !< write potential curves
+        if (parity == -1) then
+          write (filepath, "(i1, a6)") m, "-u.dat"
+        else
+          write (filepath, "(i1, a6)") m, "-g.dat"
+        end if
+
+        open(unit = 1000, file = "../output/"//adjustl(filepath))
+        do ii = 1, core_n
+
+          write (1000, '(f15.8)', advance = 'no') &
+              core_states(ii)%get_radial_distance()
+
+          ! do jj = 1, sa_basis_n
+          do jj = 1, data_in%nst(m, parity)
+
+            write (1000, '(f15.8)', advance = 'no') &
+                potential_curve(jj, ii)
+
+          end do
+
+          write (1000, *)
+
+        end do
+        close(unit = 1000)
+
+        deallocate(potential_curve)
+
+      end do
+
+    end do
 
   end subroutine structure_core
 
@@ -181,6 +220,8 @@ contains
     !< radial-separation
     do ii = 1, core_n
 
+      write (*, "(a, i5, a, i5)") "> ", ii, " / ", core_n
+
       !< construct nuclear potential (note. alters data_in%Rd)
       call nuclear_potential(core_states(ii)%get_radial_distance())
 
@@ -203,24 +244,6 @@ contains
     end do
 
     deallocate(S, H, C, w)
-
-    open(unit = 1000, file = "../output/potential_curve.dat")
-    do ii = 1, core_n
-
-      write (1000, '(f15.8)', advance = 'no') &
-          core_states(ii)%get_radial_distance()
-
-      do jj = 1, basis_n
-
-        write (1000, '(f15.8)', advance = 'no') &
-            potential_curve(jj, ii)
-
-      end do
-
-      write (1000, *)
-
-    end do
-    close(unit = 1000)
 
   end subroutine calc_potential_curve
 

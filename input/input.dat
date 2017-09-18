@@ -2,11 +2,10 @@ He2++                                                                          !
 2.0, 2.0, 0.0                                                                  ! Z1, Z2, Zasym,
 2.0, 0.0                                                                       ! Rd, origin
 0, 2                                                                           ! labot, latop
-7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 , 7,1.5 ! nps(:), alpha(:)
+10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 , 10,1.5 ! nps(:), alpha(:)
 50.0, 20.0, 8, 32, 6, 20                                                       ! rmax, qmax, ndouble, npdbl, npwave, ltmax
 1.0e-20, 1.0e-20, 1.0e-20                                                      ! formcut, regcut, expcut
-0, 0                                                                           ! Mt_min, Mt_max
-1, 0                                                                           ! nst(:, +1)
-0, 0                                                                           ! nst(:, -1)
-2, 100, 1.0e-7                                                                ! n_e, max_iter, tolerance
-0, 0, 0, 0, 0
+0, 1                                                                           ! Mt_min, Mt_max
+6, 6, 6                                                                        ! nst(:, +1)
+6, 6, 6                                                                        ! nst(:, -1)
+2, 100, 1.0e-7                                                                 ! n_e, max_iter, tolerance
